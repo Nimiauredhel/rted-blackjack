@@ -10,6 +10,8 @@ void initialize_round();
 uint8_t game_loop();
 // clears the screen
 void clear();
+// empties stdin to avoid input shenanigans
+void empty_stdin();
 
 int main(void)
 {
@@ -31,49 +33,68 @@ int main(void)
 
     return 0;
 }
+
 uint8_t pregame(uint16_t *cash, uint16_t *pot)
 {
+    int inputIsValid = 0;
     char answer = 'x';
     uint16_t bet = 0;
 
     printf("You have %u in cash, and the pot is %u.\nPlay a round? (Y/N)\n", *cash, *pot);
-    scanf(" %c", &answer);
+    inputIsValid = scanf(" %c", &answer);
+    empty_stdin();
 
-    while (answer != 'Y' && answer != 'N' && answer!='y' && answer !='n')
+    while (inputIsValid == 0 || answer != 'Y' && answer != 'N' && answer!='y' && answer !='n')
     {
         printf("Invalid answer, try again.\n");
-        scanf(" %c", &answer);
+        inputIsValid = scanf(" %c", &answer);
+        empty_stdin();
     }
 
     if (answer == 'n' || answer == 'N') return 1;
 
-    do
+    printf("How much (in multiples of 10) would you like to add to the pot?\n10 X ");
+    inputIsValid = scanf(" %hu", &bet);
+    empty_stdin();
+    bet *= 10;
+
+    while (inputIsValid == 0 || bet > *cash || bet + *pot <= 0)
     {
-        printf("How much would you like to add to the pot?\n");
-        scanf(" %hu", &bet);
-    } while (bet > *cash || bet + *pot <= 0);
+        printf("Invalid amount. You may only bet the cash that you have,\nand the pot must be greater than zero.\n10 X ");
+        inputIsValid = scanf(" %hu", &bet);
+        empty_stdin();
+        bet *= 10;
+    }
 
     *cash -= bet;
     *pot += bet;
 
     return 0;
 }
+
 void initialize_round()
 {
     printf("Blackjack RINIT\n");
 }
+
 uint8_t game_loop()
 {
     printf("Blackjack GLOOP\n");
     return 0;
 }
 
-void clear(){
+void clear()
+{
     #if defined(__linux__) || defined(__unix__) || defined(__APPLE__)
         system("clear");
     #endif
-
     #if defined(_WIN32) || defined(_WIN64)
         system("cls");
     #endif
+}
+
+void empty_stdin (void)
+{
+    int c = getchar();
+    while (c != '\n' && c != EOF) c = getchar();
 }
