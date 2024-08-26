@@ -36,7 +36,7 @@ typedef struct GameData
 } GameData;
 
 // one-time game data initialization (dynamic for the test requirements)
-GameData initialize_data();
+GameData initialize_data(void);
 // blackjack outer loop (bet/quit)
 uint8_t pregame(GameData* gameData);
 // once per round initialization code
@@ -48,9 +48,9 @@ void move_card(Card *src, Card *dst, uint8_t srcIndex);
 // writes the contents of card hands
 uint8_t show_hand(Card *hand, uint8_t showAll);
 // clears the screen
-void clear();
+void clear(void);
 // empties stdin to avoid input shenanigans
-void empty_stdin();
+void empty_stdin(void);
 
 int main(void)
 {
@@ -75,7 +75,7 @@ int main(void)
     return 0;
 }
 
-GameData initialize_data()
+GameData initialize_data(void)
 {
     printf("Initializing game data struct.\n");
     GameData gameData;
@@ -243,7 +243,7 @@ uint8_t show_hand(Card *hand, uint8_t showAll)
     return total;
 }
 
-void clear()
+void clear(void)
 {
     #if defined(__linux__) || defined(__unix__) || defined(__APPLE__)
         system("clear");
