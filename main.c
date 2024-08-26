@@ -44,7 +44,7 @@ void initialize_round(GameData* gameData);
 // blackjack core loop
 uint8_t game_loop(GameData* gameData);
 // move card from one list to another
-void move_card(Card *src, Card *dst, uint8_t srcIndex);
+void move_card(Card *src, Card **dst, uint8_t srcIndex);
 // writes the contents of card hands
 uint8_t show_hand(Card *hand, uint8_t showAll);
 // clears the screen
@@ -157,7 +157,7 @@ void initialize_round(GameData* gameData)
     for (int i = 0; i < 2; i++)
     {
         pick = rand() % gameData->currentDeckLength;
-        move_card(gameData->deck, gameData->playerHand, pick);
+        move_card(gameData->deck, &gameData->playerHand, pick);
         gameData->currentDeckLength--;
     }
 
@@ -165,7 +165,7 @@ void initialize_round(GameData* gameData)
     for (int i = 0; i < 2; i++)
     {
         pick = rand() % gameData->currentDeckLength;
-        move_card(gameData->deck, gameData->dealerHand, pick);
+        move_card(gameData->deck, &gameData->dealerHand, pick);
         gameData->currentDeckLength--;
     }
 
@@ -182,7 +182,7 @@ uint8_t game_loop(GameData* gameData)
     return 0;
 }
 
-void move_card(Card *src, Card *dst, uint8_t srcIndex)
+void move_card(Card *src, Card **dst, uint8_t srcIndex)
 {
     printf("Moving a card!\n");
     // find prev of target card
@@ -199,18 +199,18 @@ void move_card(Card *src, Card *dst, uint8_t srcIndex)
     src->next = NULL;
 
     // attach to end of dst
-    if (dst == NULL)
+    if (*dst == NULL)
     {
-        dst = src;
+        *dst = src;
     }
     else
     {
-        while (dst->next != NULL)
+        while ((*dst)->next != NULL)
         {
-            dst = dst->next;
+            *dst = (*dst)->next;
         }
 
-        dst->next = src;
+        (*dst)->next = src;
     }
 }
 
