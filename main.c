@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <time.h>
 
-#define NUM_RANKS 13
-#define NUM_SUITS 4
+#define NUM_RANKS (13)
+#define NUM_SUITS (4)
 
 const uint8_t numCards = NUM_RANKS*NUM_SUITS; // aka 52
 
@@ -26,6 +27,7 @@ typedef struct Card
 
 typedef struct GameData
 {
+    uint8_t currentDeckLength;
     uint16_t cash;
     uint16_t pot;
     Card *deck;
@@ -41,6 +43,10 @@ uint8_t pregame(GameData* gameData);
 void initialize_round(GameData* gameData);
 // blackjack core loop
 uint8_t game_loop(GameData* gameData);
+// move card from one list to another
+void move_card(Card *src, Card *dst, uint8_t srcIndex);
+// writes the contents of card hands
+uint8_t show_hand(Card *hand, uint8_t showAll);
 // clears the screen
 void clear();
 // empties stdin to avoid input shenanigans
@@ -48,12 +54,14 @@ void empty_stdin();
 
 int main(void)
 {
-    GameData gameData;
-    gameData = initialize_data();
-    clear();
-    printf("Welcome to Blackjack!\n");
+    srand(time(NULL));
 
     uint8_t quit = 0;
+    GameData gameData;
+    gameData = initialize_data();
+
+    //clear();
+    printf("Welcome to Blackjack!\n");
 
     quit = pregame(&gameData);
 
@@ -69,27 +77,31 @@ int main(void)
 
 GameData initialize_data()
 {
+    printf("Initializing game data struct.\n");
     GameData gameData;
     gameData.deck = malloc(sizeof(Card) * numCards);
+    gameData.currentDeckLength = numCards;
     gameData.cash = 1000;
     gameData.pot = 0;
+    gameData.dealerHand = NULL;
+    gameData.playerHand = NULL;
     Card *previous = NULL;
     Card *current = NULL;
 
     // ranks
-    for (int i = 0; i < NUM_RANKS; i++)
+    for (int rankIdx = 0; rankIdx < NUM_RANKS; rankIdx++)
     {
         // suits
-        for (int j = 0; j < NUM_SUITS; j++)
+        for (int suitIdx = 0; suitIdx < NUM_SUITS; suitIdx++)
         {
             previous = current;
-            current = &gameData.deck[i*(j+1)];
+            current = &gameData.deck[rankIdx+(NUM_RANKS*suitIdx)];
             // set data to rank number
-            current->data = i+1;
+            current->data = rankIdx;
             // shift it 4 bits to the left
             current->data <<= 4;
             // set one of the first four bits to represent suit
-            current->data |= (1 << j);
+            current->data |= (1 << suitIdx);
 
             if (previous != NULL) previous->next = current;
         }
@@ -104,7 +116,7 @@ uint8_t pregame(GameData* gameData)
     char answer = 'x';
     uint16_t bet = 0;
 
-    printf("You have %u in cash, and the pot is %u.\nPlay a round? (Y/N)\n", gameData->cash, gameData.pot);
+    printf("You have %u in cash, and the pot is %u.\nPlay a round? (Y/N)\n", gameData->cash, gameData->pot);
     inputIsValid = scanf(" %c", &answer);
     empty_stdin();
 
@@ -122,7 +134,7 @@ uint8_t pregame(GameData* gameData)
     empty_stdin();
     bet *= 10;
 
-    while (inputIsValid == 0 || bet > *cash || bet + *pot <= 0)
+    while (inputIsValid == 0 || bet > gameData->cash || bet + gameData->pot <= 0)
     {
         printf("Invalid amount. You may only bet the cash that you have,\nand the pot must be greater than zero.\n10 X ");
         inputIsValid = scanf(" %hu", &bet);
@@ -139,12 +151,96 @@ uint8_t pregame(GameData* gameData)
 void initialize_round(GameData* gameData)
 {
     printf("Blackjack RINIT\n");
+    uint8_t pick;
+
+    // deal two cards to player hand
+    for (int i = 0; i < 2; i++)
+    {
+        pick = rand() % gameData->currentDeckLength;
+        move_card(gameData->deck, gameData->playerHand, pick);
+        gameData->currentDeckLength--;
+    }
+
+    // deal two cards to dealer hand
+    for (int i = 0; i < 2; i++)
+    {
+        pick = rand() % gameData->currentDeckLength;
+        move_card(gameData->deck, gameData->dealerHand, pick);
+        gameData->currentDeckLength--;
+    }
+
+    printf("Player hand:\n");
+    show_hand(gameData->playerHand, 1);
+
+    printf("Dealer hand:\n");
+    show_hand(gameData->dealerHand, 0);
 }
 
 uint8_t game_loop(GameData* gameData)
 {
     printf("Blackjack GLOOP\n");
     return 0;
+}
+
+void move_card(Card *src, Card *dst, uint8_t srcIndex)
+{
+    printf("Moving a card!\n");
+    // find prev of target card
+    for (int i = 0; i < srcIndex-1; i++)
+    {
+        src = src->next;
+    }
+
+    Card *prev = src;
+    src = src->next;
+
+    // detach target card from src
+    prev->next = src->next;
+    src->next = NULL;
+
+    // attach to end of dst
+    if (dst == NULL)
+    {
+        dst = src;
+    }
+    else
+    {
+        while (dst->next != NULL)
+        {
+            dst = dst->next;
+        }
+
+        dst->next = src;
+    }
+}
+
+uint8_t show_hand(Card *hand, uint8_t showAll)
+{
+    uint8_t total = 0;
+    uint8_t aces = 0;
+
+    while(hand != NULL)
+    {
+        uint8_t rank = hand->data << 4;
+        printf(" %s of %s ", ranks[rank], "????");
+        uint8_t value = rank+1;
+        if (value > 10) value = 10;
+        if (value == 1) aces++;
+        total += value;
+        hand = hand->next;
+    }
+
+    printf("\n");
+
+    // account for aces being able to be either 1 or 10 in value
+    while(total < 13 && aces > 0)
+    {
+        total += 9;
+        aces--;
+    }
+
+    printf("Total: %hu \n", total);
+    return total;
 }
 
 void clear()
