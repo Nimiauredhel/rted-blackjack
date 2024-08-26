@@ -221,7 +221,7 @@ uint8_t show_hand(Card *hand, uint8_t showAll)
 
     while(hand != NULL)
     {
-        uint8_t rank = hand->data << 4;
+        uint8_t rank = hand->data >> 4;
         printf(" %s of %s ", ranks[rank], "????");
         uint8_t value = rank+1;
         if (value > 10) value = 10;
