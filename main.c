@@ -8,13 +8,13 @@
 
 const uint8_t numCards = NUM_RANKS*NUM_SUITS; // aka 52
 
-const char ranks[NUM_RANKS][5] =
+const char ranks[NUM_RANKS][6] =
 {
     "Ace", "Two", "Three", "Four", "Five", "Six", "Seven",
     "Eight", "Nine", "Ten", "Jack", "Queen", "King"
 };
 
-const char suits[NUM_SUITS][7] =
+const char suits[NUM_SUITS][8] =
 {
     "Hearts", "Clubs", "Diamond", "Spades"
 };
@@ -44,7 +44,7 @@ void initialize_round(GameData* gameData);
 // blackjack core loop
 uint8_t game_loop(GameData* gameData);
 // move card from one list to another
-void move_card(Card *src, Card **dst, uint8_t srcIndex);
+void move_card(Card **src, Card **dst, uint8_t srcIndex);
 // writes the contents of card hands
 uint8_t show_hand(Card *hand, uint8_t showAll);
 // clears the screen
@@ -107,6 +107,8 @@ GameData initialize_data(void)
         }
     }
 
+    current->next = NULL;
+
     return gameData;
 }
 
@@ -120,7 +122,7 @@ uint8_t pregame(GameData* gameData)
     inputIsValid = scanf(" %c", &answer);
     empty_stdin();
 
-    while (inputIsValid == 0 || answer != 'Y' && answer != 'N' && answer!='y' && answer !='n')
+    while (inputIsValid == 0 || (answer != 'Y' && answer != 'N' && answer!='y' && answer !='n'))
     {
         printf("Invalid answer, try again.\n");
         inputIsValid = scanf(" %c", &answer);
@@ -153,11 +155,52 @@ void initialize_round(GameData* gameData)
     printf("Blackjack RINIT\n");
     uint8_t pick;
 
+    // if player/dealer hands are not empty,
+    // move them back to the deck
+    if (gameData->playerHand != NULL)
+    {
+        Card *current;
+        Card *next;
+
+        current = NULL;
+        next = gameData->playerHand;
+
+        do
+        {
+            current = next;
+            next = current->next;
+            printf("Returning player card!\n");
+            move_card(&current, &gameData->deck, 0);
+            gameData->currentDeckLength++;
+        }
+        while (next != NULL);
+    }
+
+    if (gameData->dealerHand != NULL)
+    {
+        Card *current;
+        Card *next;
+
+        current = NULL;
+        next = gameData->dealerHand;
+
+        do
+        {
+            current = next;
+            next = current->next;
+            printf("Returning dealer card!\n");
+            move_card(&current, &gameData->deck, 0);
+            gameData->currentDeckLength++;
+        }
+        while (next != NULL);
+    }
+
     // deal two cards to player hand
     for (int i = 0; i < 2; i++)
     {
         pick = rand() % gameData->currentDeckLength;
-        move_card(gameData->deck, &gameData->playerHand, pick);
+        printf("Dealing player card %d!\n", i);
+        move_card(&gameData->deck, &gameData->playerHand, pick);
         gameData->currentDeckLength--;
     }
 
@@ -165,7 +208,8 @@ void initialize_round(GameData* gameData)
     for (int i = 0; i < 2; i++)
     {
         pick = rand() % gameData->currentDeckLength;
-        move_card(gameData->deck, &gameData->dealerHand, pick);
+        printf("Dealing dealer card %d!\n", i);
+        move_card(&gameData->deck, &gameData->dealerHand, pick);
         gameData->currentDeckLength--;
     }
 
@@ -182,35 +226,54 @@ uint8_t game_loop(GameData* gameData)
     return 0;
 }
 
-void move_card(Card *src, Card **dst, uint8_t srcIndex)
+void move_card(Card **src, Card **dst, uint8_t srcIndex)
 {
-    printf("Moving a card!\n");
-    // find prev of target card
-    for (int i = 0; i < srcIndex-1; i++)
+    Card *current = *src;
+
+    // if target is not the first element,
+    // its previous element needs to be detached
+    if (srcIndex > 0)
     {
-        src = src->next;
+        // find prev of target card
+        Card *previous = NULL;
+
+        for (int i = 0; i < srcIndex; i++)
+        {
+            if (current == NULL)
+            {
+                printf("Unexpected null pointer at index %d while trying to access index %d", i, srcIndex);
+            }
+            previous = current;
+            current = previous->next;
+        }
+
+        // detach prev from target card
+        // and attach it to the next card, if it exists
+        previous->next = current->next;
+    }
+    // if target is the first element,
+    // we need to replace the head (if next element exists)
+    else
+    {
+        *src = current->next;
     }
 
-    Card *prev = src;
-    src = src->next;
-
-    // detach target card from src
-    prev->next = src->next;
-    src->next = NULL;
+    // detach target card from next card
+    current->next = NULL;
 
     // attach to end of dst
     if (*dst == NULL)
     {
-        *dst = src;
+        *dst = current;
     }
     else
     {
         while ((*dst)->next != NULL)
         {
-            *dst = (*dst)->next;
+            dst = &((*dst)->next);
         }
 
-        (*dst)->next = src;
+        (*dst)->next = current;
     }
 }
 

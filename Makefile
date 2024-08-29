@@ -9,3 +9,7 @@ debug:
 
 run:
 	./main.o
+
+clean:
+	rm *.o
+
