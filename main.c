@@ -109,6 +109,7 @@ GameData initialize_data(void)
 
     current->next = NULL;
 
+    show_hand(gameData.deck, 0);
     return gameData;
 }
 
@@ -285,7 +286,14 @@ uint8_t show_hand(Card *hand, uint8_t showAll)
     while(hand != NULL)
     {
         uint8_t rank = hand->data >> 4;
-        printf(" %s of %s ", ranks[rank], "????");
+        uint8_t suite_byte = (uint8_t)(hand->data << 4);
+        uint8_t suite = 0;
+        while(suite_byte > 16)
+        {
+            suite_byte /= 2;
+            suite++;
+        }
+        printf(" %s of %s ", ranks[rank], suits[suite]);
         uint8_t value = rank+1;
         if (value > 10) value = 10;
         if (value == 1) aces++;
