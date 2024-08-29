@@ -5,6 +5,7 @@
 
 #define NUM_RANKS (13)
 #define NUM_SUITS (4)
+#define MOVE_CARD(src, dst, srcIndex) cardlist_add(dst, cardlist_draw(src, srcIndex))
 
 const uint8_t numCards = NUM_RANKS*NUM_SUITS; // aka 52
 
@@ -25,14 +26,21 @@ typedef struct Card
     struct Card *next;
 } Card;
 
+typedef struct CardList
+{
+    Card *head;
+    Card *tail;
+    uint8_t length;
+} CardList;
+
 typedef struct GameData
 {
-    uint8_t currentDeckLength;
     uint16_t cash;
     uint16_t pot;
-    Card *deck;
-    Card *playerHand;
-    Card *dealerHand;
+    Card* cards;
+    CardList deck;
+    CardList playerHand;
+    CardList dealerHand;
 } GameData;
 
 // one-time game data initialization (dynamic for the test requirements)
@@ -43,14 +51,16 @@ uint8_t pregame(GameData* gameData);
 void initialize_round(GameData* gameData);
 // blackjack core loop
 uint8_t game_loop(GameData* gameData);
-// move card from one list to another
-void move_card(Card **src, Card **dst, uint8_t srcIndex);
 // writes the contents of card hands
-uint8_t show_hand(Card *hand, uint8_t showAll);
+uint8_t show_hand(CardList *hand, uint8_t showAll);
 // clears the screen
 void clear(void);
 // empties stdin to avoid input shenanigans
 void empty_stdin(void);
+// *** card list functions ***
+void cardlist_add(CardList *list, Card *newCard);
+Card* cardlist_pop(CardList *list);
+Card* cardlist_draw(CardList *list, uint8_t index);
 
 int main(void)
 {
@@ -79,13 +89,13 @@ GameData initialize_data(void)
 {
     printf("Initializing game data struct.\n");
     GameData gameData;
-    gameData.deck = malloc(sizeof(Card) * numCards);
-    gameData.currentDeckLength = numCards;
+    gameData.cards = malloc(sizeof(Card) * numCards);
+    gameData.deck.length = 0;
+    gameData.dealerHand.length = 0;
+    gameData.playerHand.length = 0;
     gameData.cash = 1000;
     gameData.pot = 0;
-    gameData.dealerHand = NULL;
-    gameData.playerHand = NULL;
-    Card *previous = NULL;
+
     Card *current = NULL;
 
     // ranks
@@ -94,8 +104,7 @@ GameData initialize_data(void)
         // suits
         for (int suitIdx = 0; suitIdx < NUM_SUITS; suitIdx++)
         {
-            previous = current;
-            current = &gameData.deck[rankIdx+(NUM_RANKS*suitIdx)];
+            current = &gameData.cards[rankIdx+(NUM_RANKS*suitIdx)];
             // set data to rank number
             current->data = rankIdx;
             // shift it 4 bits to the left
@@ -103,13 +112,11 @@ GameData initialize_data(void)
             // set one of the first four bits to represent suit
             current->data |= (1 << suitIdx);
 
-            if (previous != NULL) previous->next = current;
+            cardlist_add(&gameData.deck, current);
         }
     }
 
-    current->next = NULL;
-
-    show_hand(gameData.deck, 0);
+    show_hand(&gameData.deck, 0);
     return gameData;
 }
 
@@ -158,67 +165,37 @@ void initialize_round(GameData* gameData)
 
     // if player/dealer hands are not empty,
     // move them back to the deck
-    if (gameData->playerHand != NULL)
+    while (gameData->playerHand.length > 0)
     {
-        Card *current;
-        Card *next;
-
-        current = NULL;
-        next = gameData->playerHand;
-
-        do
-        {
-            current = next;
-            next = current->next;
-            printf("Returning player card!\n");
-            move_card(&current, &gameData->deck, 0);
-            gameData->currentDeckLength++;
-        }
-        while (next != NULL);
+        MOVE_CARD(&gameData->playerHand, &gameData->deck, 0);
     }
 
-    if (gameData->dealerHand != NULL)
+    while (gameData->dealerHand.length > 0)
     {
-        Card *current;
-        Card *next;
-
-        current = NULL;
-        next = gameData->dealerHand;
-
-        do
-        {
-            current = next;
-            next = current->next;
-            printf("Returning dealer card!\n");
-            move_card(&current, &gameData->deck, 0);
-            gameData->currentDeckLength++;
-        }
-        while (next != NULL);
+        MOVE_CARD(&gameData->dealerHand, &gameData->deck, 0);
     }
 
     // deal two cards to player hand
     for (int i = 0; i < 2; i++)
     {
-        pick = rand() % gameData->currentDeckLength;
+        pick = rand() % gameData->deck.length;
         printf("Dealing player card %d!\n", i);
-        move_card(&gameData->deck, &gameData->playerHand, pick);
-        gameData->currentDeckLength--;
+        MOVE_CARD(&gameData->deck, &gameData->playerHand, pick);
     }
 
     // deal two cards to dealer hand
     for (int i = 0; i < 2; i++)
     {
-        pick = rand() % gameData->currentDeckLength;
+        pick = rand() % gameData->deck.length;
         printf("Dealing dealer card %d!\n", i);
-        move_card(&gameData->deck, &gameData->dealerHand, pick);
-        gameData->currentDeckLength--;
+        MOVE_CARD(&gameData->deck, &gameData->dealerHand, pick);
     }
 
     printf("Player hand:\n");
-    show_hand(gameData->playerHand, 1);
+    show_hand(&gameData->playerHand, 1);
 
     printf("Dealer hand:\n");
-    show_hand(gameData->dealerHand, 0);
+    show_hand(&gameData->dealerHand, 0);
 }
 
 uint8_t game_loop(GameData* gameData)
@@ -227,66 +204,17 @@ uint8_t game_loop(GameData* gameData)
     return 0;
 }
 
-void move_card(Card **src, Card **dst, uint8_t srcIndex)
-{
-    Card *current = *src;
-
-    // if target is not the first element,
-    // its previous element needs to be detached
-    if (srcIndex > 0)
-    {
-        // find prev of target card
-        Card *previous = NULL;
-
-        for (int i = 0; i < srcIndex; i++)
-        {
-            if (current == NULL)
-            {
-                printf("Unexpected null pointer at index %d while trying to access index %d", i, srcIndex);
-            }
-            previous = current;
-            current = previous->next;
-        }
-
-        // detach prev from target card
-        // and attach it to the next card, if it exists
-        previous->next = current->next;
-    }
-    // if target is the first element,
-    // we need to replace the head (if next element exists)
-    else
-    {
-        *src = current->next;
-    }
-
-    // detach target card from next card
-    current->next = NULL;
-
-    // attach to end of dst
-    if (*dst == NULL)
-    {
-        *dst = current;
-    }
-    else
-    {
-        while ((*dst)->next != NULL)
-        {
-            dst = &((*dst)->next);
-        }
-
-        (*dst)->next = current;
-    }
-}
-
-uint8_t show_hand(Card *hand, uint8_t showAll)
+uint8_t show_hand(CardList *hand, uint8_t showAll)
 {
     uint8_t total = 0;
     uint8_t aces = 0;
 
-    while(hand != NULL)
+    Card *current = hand->head;
+
+    while(current != NULL)
     {
-        uint8_t rank = hand->data >> 4;
-        uint8_t suite_byte = (uint8_t)(hand->data << 4);
+        uint8_t rank = current->data >> 4;
+        uint8_t suite_byte = (uint8_t)(current->data << 4);
         uint8_t suite = 0;
         while(suite_byte > 16)
         {
@@ -298,7 +226,7 @@ uint8_t show_hand(Card *hand, uint8_t showAll)
         if (value > 10) value = 10;
         if (value == 1) aces++;
         total += value;
-        hand = hand->next;
+        current = current->next;
     }
 
     printf("\n");
@@ -328,4 +256,76 @@ void empty_stdin (void)
 {
     int c = getchar();
     while (c != '\n' && c != EOF) c = getchar();
+}
+
+void cardlist_add(CardList *list, Card *newCard)
+{
+    if (list->length == 0)
+    {
+        list->head = newCard;
+        list->tail = newCard;
+        list->length = 1;
+    }
+    else
+    {
+        list->tail->next = newCard;
+        list->tail = newCard;
+        list->length++;
+    }
+}
+Card* cardlist_pop(CardList *list)
+{
+    if (list->length == 0) return NULL;
+    Card* out = list->head;
+    list->length--;
+
+    if (list->length == 0)
+    {
+        list->head = NULL;
+        list->tail = NULL;
+    }
+    else
+    {
+        list->head = out->next;
+    }
+
+    out->next = NULL;
+    return out;
+}
+Card* cardlist_draw(CardList *list, uint8_t index)
+{
+    if (index == 0)
+    {
+        return cardlist_pop(list);
+    }
+
+    if (list->length == 0) return NULL;
+    Card* prev = NULL;
+    Card* out = list->head;
+    for (uint8_t i = 0; i < index; i++)
+    {
+        prev = out;
+        out = out->next;
+    }
+
+    list->length--;
+
+    if (list->length == 0)
+    {
+        list->head = NULL;
+        list->tail = NULL;
+    }
+    else
+    {
+        if (out->next == NULL)
+        {
+            list->tail = prev;
+        }
+
+        prev->next = out->next;
+    }
+
+    out->next = NULL;
+
+    return out;
 }
