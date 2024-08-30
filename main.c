@@ -58,6 +58,7 @@ void clear(void);
 // empties stdin to avoid input shenanigans
 void empty_stdin(void);
 // *** card list functions ***
+void cardlist_init(CardList *list);
 void cardlist_add(CardList *list, Card *newCard);
 Card* cardlist_pop(CardList *list);
 Card* cardlist_draw(CardList *list, uint8_t index);
@@ -82,6 +83,7 @@ int main(void)
         quit = pregame(&gameData);
     }
 
+    free(gameData.cards);
     return 0;
 }
 
@@ -90,9 +92,9 @@ GameData initialize_data(void)
     printf("Initializing game data struct.\n");
     GameData gameData;
     gameData.cards = malloc(sizeof(Card) * numCards);
-    gameData.deck.length = 0;
-    gameData.dealerHand.length = 0;
-    gameData.playerHand.length = 0;
+    cardlist_init(&gameData.deck);
+    cardlist_init(&gameData.playerHand);
+    cardlist_init(&gameData.dealerHand);
     gameData.cash = 1000;
     gameData.pot = 0;
 
@@ -258,6 +260,12 @@ void empty_stdin (void)
     while (c != '\n' && c != EOF) c = getchar();
 }
 
+void cardlist_init(CardList *list)
+{
+    list->length = 0;
+    list->head = NULL;
+    list->tail = NULL;
+}
 void cardlist_add(CardList *list, Card *newCard)
 {
     if (list->length == 0)
