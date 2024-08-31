@@ -10,6 +10,9 @@ debug:
 run:
 	./main.o
 
+gdb:
+	gdb ./main.o
+
 valgrind:
 	valgrind -s --leak-check=yes --track-origins=yes ./main.o
 

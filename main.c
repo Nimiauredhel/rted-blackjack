@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #define NUM_RANKS (13)
@@ -8,6 +9,8 @@
 #define MOVE_CARD(src, dst, srcIndex) cardlist_add(dst, cardlist_draw(src, srcIndex))
 
 const uint8_t numCards = NUM_RANKS*NUM_SUITS; // aka 52
+const char *hit_string = "hit\n";
+const char *stand_string = "stand\n";
 
 const char ranks[NUM_RANKS][6] =
 {
@@ -43,18 +46,30 @@ typedef struct GameData
     CardList dealerHand;
 } GameData;
 
+typedef enum outcome_t
+{
+    QUIT = -1,
+    NONE = 0,
+    PLAYER_BLACKJACK = 1, // player wins pot * 2.5
+    PLAYER_WIN = 2, // player wins pot * 2
+    PLAYER_LOSE = 3, // no win, pot reset to zero
+    TIE = 4 // no win, pot not reset
+} outcome_t;
+
 // one-time game data initialization (dynamic for the test requirements)
 GameData initialize_data(void);
 // blackjack outer loop (bet/quit)
-uint8_t pregame(GameData* gameData);
+outcome_t pregame(GameData* gameData);
 // once per round initialization code
-void initialize_round(GameData* gameData);
+outcome_t initialize_round(GameData* gameData);
 // blackjack core loop
-uint8_t game_loop(GameData* gameData);
+outcome_t game_loop(GameData* gameData);
 // writes the contents of card hands
-uint8_t show_hand(CardList *hand, uint8_t showAll);
+int8_t show_hand(CardList *hand, uint8_t showAll);
 // clears the screen
 void clear(void);
+// waits for specified number of milliseconds
+void delay_ms(uint16_t ms);
 // empties stdin to avoid input shenanigans
 void empty_stdin(void);
 // *** card list functions ***
@@ -67,20 +82,20 @@ int main(void)
 {
     srand(time(NULL));
 
-    uint8_t quit = 0;
+    outcome_t outcome = 0;
     GameData gameData;
     gameData = initialize_data();
 
-    //clear();
     printf("Welcome to Blackjack!\n");
 
-    quit = pregame(&gameData);
+    outcome = pregame(&gameData);
 
-    while(quit == 0)
+    while(outcome != -1)
     {
-        initialize_round(&gameData);
-        game_loop(&gameData);
-        quit = pregame(&gameData);
+        clear();
+        outcome = initialize_round(&gameData);
+        outcome = game_loop(&gameData);
+        outcome = pregame(&gameData);
     }
 
     free(gameData.cards);
@@ -122,7 +137,7 @@ GameData initialize_data(void)
     return gameData;
 }
 
-uint8_t pregame(GameData* gameData)
+outcome_t pregame(GameData* gameData)
 {
     int inputIsValid = 0;
     char answer = 'x';
@@ -139,7 +154,7 @@ uint8_t pregame(GameData* gameData)
         empty_stdin();
     }
 
-    if (answer == 'n' || answer == 'N') return 1;
+    if (answer == 'n' || answer == 'N') return -1;
 
     printf("How much (in multiples of 10) would you like to add to the pot?\n10 X ");
     inputIsValid = scanf(" %hu", &bet);
@@ -160,7 +175,7 @@ uint8_t pregame(GameData* gameData)
     return 0;
 }
 
-void initialize_round(GameData* gameData)
+outcome_t initialize_round(GameData* gameData)
 {
     printf("Blackjack RINIT\n");
     uint8_t pick;
@@ -195,18 +210,101 @@ void initialize_round(GameData* gameData)
 
     printf("Player hand:\n");
     show_hand(&gameData->playerHand, 1);
+    delay_ms(250);
 
     printf("Dealer hand:\n");
     show_hand(&gameData->dealerHand, 0);
-}
+    delay_ms(250);
 
-uint8_t game_loop(GameData* gameData)
-{
-    printf("Blackjack GLOOP\n");
     return 0;
 }
 
-uint8_t show_hand(CardList *hand, uint8_t showAll)
+outcome_t game_loop(GameData* gameData)
+{
+    printf("Blackjack GLOOP\n");
+
+    uint8_t loop_end = 0;
+    uint8_t pick = 0;
+    uint8_t value = 0;
+    char input[10] = "\0\0\0\0\0\0\0\0\0\0";
+
+    // hit or stand loop
+    while (loop_end == 0)
+    {
+        // HIT or STAND
+        strcpy(input, "\0\0\0\0\0\0\0\0\0\0"); 
+        printf("Would you like to Hit or Stand?\n");
+        delay_ms(500);
+        printf("(Enter \"hit\" or \"stand\" to answer)\n");
+        fgets(input, 10, stdin);
+
+        if (strcmp(input, hit_string) == 0)
+        {
+            // HIT: player draws another card
+            pick = rand() % gameData->deck.length;
+            printf("Dealing card to player!\n");
+            MOVE_CARD(&gameData->deck, &gameData->playerHand, pick);
+            // total value is recalculated
+            printf("Player hand:\n");
+            value = show_hand(&gameData->playerHand, 1);
+            // if over 21 player loses
+            if (value > 21)
+            {
+                return PLAYER_LOSE;
+            }
+            // if exactly 21 player wins
+            else if (value == 21)
+            {
+                return PLAYER_BLACKJACK;
+            }
+            // else, loop restarts
+        }
+        else if (strcmp(input, stand_string) == 0)
+
+        {
+            // STAND: loop breaks and we continue
+            // to DEALER DRAW
+            break;
+        }
+        else
+        {
+            printf("Invalid input, please try again.\n");
+        }
+    }
+
+    uint8_t dealerValue = 0;
+    // dealer draws 
+    //until their total value is 17 or over
+    while (dealerValue < 17)
+    {
+        pick = rand() % gameData->deck.length;
+        printf("Dealing card to dealer!\n");
+        printf("Dealer hand:\n");
+        MOVE_CARD(&gameData->deck, &gameData->dealerHand, pick);
+        dealerValue = show_hand(&gameData->dealerHand, 1);
+        delay_ms(500);
+    }
+
+    // if it's over 21, player wins
+    if (dealerValue > 21)
+    {
+        return PLAYER_WIN;
+    }
+    // else if more than player, player loses
+    else if (dealerValue > value)
+    {
+        return PLAYER_LOSE;
+    }
+    // equals is tie, less than: player wins .. duh
+    else if (dealerValue == value)
+    {
+        return TIE;
+    }
+
+    return PLAYER_WIN;
+}
+
+int8_t show_hand(CardList *hand, uint8_t showAll)
 {
     uint8_t total = 0;
     uint8_t aces = 0;
@@ -218,17 +316,23 @@ uint8_t show_hand(CardList *hand, uint8_t showAll)
         uint8_t rank = current->data >> 4;
         uint8_t suite_byte = (uint8_t)(current->data << 4);
         uint8_t suite = 0;
+
         while(suite_byte > 16)
         {
             suite_byte /= 2;
             suite++;
         }
+
         printf(" %s of %s ", ranks[rank], suits[suite]);
         uint8_t value = rank+1;
+
         if (value > 10) value = 10;
-        if (value == 1) aces++;
+        else if (value == 1) aces++;
+
         total += value;
         current = current->next;
+
+        delay_ms(250);
     }
 
     printf("\n");
@@ -252,6 +356,12 @@ void clear(void)
     #if defined(_WIN32) || defined(_WIN64)
         system("cls");
     #endif
+}
+
+void delay_ms(uint16_t ms)
+{
+    clock_t start_time = clock();
+    while (clock() < start_time + ms);
 }
 
 void empty_stdin (void)
