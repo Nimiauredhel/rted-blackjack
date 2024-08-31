@@ -54,6 +54,7 @@ typedef struct GameData
 
 typedef enum outcome_t
 {
+    BROKE = -2,
     QUIT = -1,
     NONE = 0,
     PLAYER_BLACKJACK = 1, // player wins pot * 2.5
@@ -98,7 +99,7 @@ int main(void)
     printf("Welcome to Blackjack!\nPress 'Enter' to continue.\n");
     empty_stdin();
 
-    while(outcome != -1)
+    while(outcome > -1)
     {
         outcome = pregame(&gameData);
         if (handle_outcome(outcome, &gameData)) continue;
@@ -154,7 +155,15 @@ outcome_t pregame(GameData* gameData)
 
     clear();
     printf("      ===     BETTING     ===\n");
-    printf("You have $%u in cash, and the pot is $%u.\nPlay a round? (Y/N)\n", gameData->cash, gameData->pot);
+    printf("You have $%u in cash, and the pot is $%u.\n", gameData->cash, gameData->pot);
+    delay_ms(500);
+
+    if (gameData->cash < 10 && gameData->pot == 0)
+    {
+        delay_ms(1000);
+         return -2;
+    }
+    printf("Play a round? (Y/N)\n");
     inputIsValid = scanf(" %c", &answer);
     empty_stdin();
 
@@ -333,6 +342,10 @@ uint8_t handle_outcome(outcome_t outcome, GameData *gameData)
 
     switch (outcome)
     {
+        case BROKE:
+            clear();
+            printf("Out of gambling money.\nGAME OVER.\n");
+            return 1;
         case QUIT:
             clear();
             printf("Enough Blackjack for now.\nDon't forget to gamble responsibly!\n");
