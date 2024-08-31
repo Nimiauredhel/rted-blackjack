@@ -1,3 +1,9 @@
+    #if defined(__linux__) || defined(__unix__) || defined(__APPLE__)
+#define _GNU_SOURCE
+    #endif
+    #if defined(_WIN32) || defined(_WIN64)
+    #endif
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -71,7 +77,7 @@ int8_t show_hand(CardList *hand, uint8_t showAll);
 // clears the screen
 void clear(void);
 // waits for specified number of milliseconds
-void delay_ms(uint16_t ms);
+void delay_ms(uint32_t ms);
 // empties stdin to avoid input shenanigans
 void empty_stdin(void);
 // *** card list functions ***
@@ -94,7 +100,6 @@ int main(void)
 
     while(outcome != -1)
     {
-        clear();
         outcome = pregame(&gameData);
         if (handle_outcome(outcome, &gameData)) continue;
         outcome = initialize_round(&gameData);
@@ -147,6 +152,8 @@ outcome_t pregame(GameData* gameData)
     char answer = 'x';
     uint16_t bet = 0;
 
+    clear();
+    printf("      ===     BETTING     ===\n");
     printf("You have %u in cash, and the pot is %u.\nPlay a round? (Y/N)\n", gameData->cash, gameData->pot);
     inputIsValid = scanf(" %c", &answer);
     empty_stdin();
@@ -181,7 +188,6 @@ outcome_t pregame(GameData* gameData)
 
 outcome_t initialize_round(GameData* gameData)
 {
-    printf("Blackjack RINIT\n");
     uint8_t pick;
 
     // if player/dealer hands are not empty,
@@ -200,7 +206,6 @@ outcome_t initialize_round(GameData* gameData)
     for (int i = 0; i < 2; i++)
     {
         pick = rand() % gameData->deck.length;
-        printf("Dealing player card %d!\n", i);
         MOVE_CARD(&gameData->deck, &gameData->playerHand, pick);
     }
 
@@ -208,25 +213,26 @@ outcome_t initialize_round(GameData* gameData)
     for (int i = 0; i < 2; i++)
     {
         pick = rand() % gameData->deck.length;
-        printf("Dealing dealer card %d!\n", i);
         MOVE_CARD(&gameData->deck, &gameData->dealerHand, pick);
     }
 
-    printf("Player hand:\n");
-    show_hand(&gameData->playerHand, 1);
-    delay_ms(500);
+    printf("\n");
 
-    printf("Dealer hand:\n");
+    printf("Player initial hand:\n");
+    show_hand(&gameData->playerHand, 1);
+    printf("\n");
+    delay_ms(250);
+
+    printf("Dealer initial hand:\n");
     show_hand(&gameData->dealerHand, 0);
-    delay_ms(500);
+    printf("\n");
+    delay_ms(250);
 
     return 0;
 }
 
 outcome_t game_loop(GameData* gameData)
 {
-    printf("Blackjack GLOOP\n");
-
     uint8_t loop_end = 0;
     uint8_t pick = 0;
     uint8_t value = 0;
@@ -238,7 +244,6 @@ outcome_t game_loop(GameData* gameData)
         // HIT or STAND
         strcpy(input, "\0\0\0\0\0\0\0\0\0\0"); 
         printf("Would you like to Hit or Stand?\n");
-        delay_ms(500);
         printf("(Enter \"hit\" or \"stand\" to answer)\n");
         fgets(input, 10, stdin);
 
@@ -246,11 +251,15 @@ outcome_t game_loop(GameData* gameData)
         {
             // HIT: player draws another card
             pick = rand() % gameData->deck.length;
+            clear();
+            printf("      ===       HIT       ===\n");
             printf("Dealing card to player!\n");
             MOVE_CARD(&gameData->deck, &gameData->playerHand, pick);
             // total value is recalculated
             printf("Player hand:\n");
             value = show_hand(&gameData->playerHand, 1);
+            printf("Dealer hand:\n");
+            show_hand(&gameData->dealerHand, 0);
             // if over 21 player loses
             if (value > 21)
             {
@@ -279,16 +288,25 @@ outcome_t game_loop(GameData* gameData)
     // dealer draws 
     //until their total value is 17 or over
     uint8_t dealerValue = 0;
+    clear();
 
     while (dealerValue < 17)
     {
+        clear();
+        printf("      ===  DEALER   DRAW  ===\nPlayer hand:\n");
+        show_hand(&gameData->playerHand, 1);
+        printf("\n");
+
         pick = rand() % gameData->deck.length;
         printf("Dealing card to dealer!\n");
-        printf("Dealer hand:\n");
-        MOVE_CARD(&gameData->deck, &gameData->dealerHand, pick);
-        dealerValue = show_hand(&gameData->dealerHand, 1);
         delay_ms(500);
+        MOVE_CARD(&gameData->deck, &gameData->dealerHand, pick);
+        printf("Dealer hand:\n");
+        dealerValue = show_hand(&gameData->dealerHand, 1);
+        delay_ms(1000);
     }
+
+    delay_ms(500);
 
     // if it's over 21, player wins
     if (dealerValue > 21)
@@ -383,9 +401,10 @@ int8_t show_hand(CardList *hand, uint8_t showAll)
         current = current->next;
         count++;
 
-        delay_ms(250);
+        delay_ms(100);
     }
 
+    delay_ms(100);
     printf("\n");
 
     // account for aces being able to be either 1 or 10 in value
@@ -411,10 +430,19 @@ void clear(void)
     printf("    =======  BLACKJACK  =======\n\n");
 }
 
-void delay_ms(uint16_t ms)
+void delay_ms(uint32_t ms)
 {
-    clock_t start_time = clock();
-    while (clock() < start_time + ms);
+    #if defined(__linux__) || defined(__unix__) || defined(__APPLE__)
+        uint32_t s = ms / 1000;
+        ms = ms % 1000;
+        struct timespec req = { s, ms * 1000000 };
+        struct timespec rem = { s, ms * 1000000 };
+        nanosleep(&req, &rem);
+    #endif
+    #if defined(_WIN32) || defined(_WIN64)
+        clock_t start_time = clock();
+        while (clock() < start_time + ms);
+    #endif
 }
 
 void empty_stdin (void)
