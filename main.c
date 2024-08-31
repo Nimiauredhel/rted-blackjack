@@ -64,6 +64,8 @@ outcome_t pregame(GameData* gameData);
 outcome_t initialize_round(GameData* gameData);
 // blackjack core loop
 outcome_t game_loop(GameData* gameData);
+// handle outcome, return 0 if no outcome & 1 if round over
+uint8_t handle_outcome(outcome_t outcome, GameData *gameData);
 // writes the contents of card hands
 int8_t show_hand(CardList *hand, uint8_t showAll);
 // clears the screen
@@ -94,11 +96,15 @@ int main(void)
     {
         clear();
         outcome = initialize_round(&gameData);
+        if (handle_outcome(outcome, &gameData)) continue;
         outcome = game_loop(&gameData);
+        if (handle_outcome(outcome, &gameData)) continue;
         outcome = pregame(&gameData);
+        handle_outcome(outcome, &gameData);
     }
 
     free(gameData.cards);
+
     return 0;
 }
 
@@ -133,7 +139,6 @@ GameData initialize_data(void)
         }
     }
 
-    show_hand(&gameData.deck, 0);
     return gameData;
 }
 
@@ -210,11 +215,11 @@ outcome_t initialize_round(GameData* gameData)
 
     printf("Player hand:\n");
     show_hand(&gameData->playerHand, 1);
-    delay_ms(250);
+    delay_ms(500);
 
     printf("Dealer hand:\n");
     show_hand(&gameData->dealerHand, 0);
-    delay_ms(250);
+    delay_ms(500);
 
     return 0;
 }
@@ -272,9 +277,10 @@ outcome_t game_loop(GameData* gameData)
         }
     }
 
-    uint8_t dealerValue = 0;
     // dealer draws 
     //until their total value is 17 or over
+    uint8_t dealerValue = 0;
+
     while (dealerValue < 17)
     {
         pick = rand() % gameData->deck.length;
@@ -304,10 +310,46 @@ outcome_t game_loop(GameData* gameData)
     return PLAYER_WIN;
 }
 
+uint8_t handle_outcome(outcome_t outcome, GameData *gameData)
+{
+    switch (outcome)
+    {
+        case QUIT:
+        case NONE:
+            return 0;
+            break;
+        case PLAYER_BLACKJACK:
+            printf("IIIIT'S A BLACKJACK! CONGRATS!\n");
+            gameData->cash += (gameData->pot * 2.5f);
+            gameData->pot = 0;
+            break;
+        case PLAYER_WIN:
+            printf("You win this one, human!\n");
+            gameData->cash += (gameData->pot * 2);
+            gameData->pot = 0;
+            break;
+        case PLAYER_LOSE:
+            printf("Too bad, you lost. Better luck next time.\n");
+            gameData->pot = 0;
+            break;
+        case TIE:
+            printf("It's a tie! Money's still on the table...\n");
+            break;
+        default:
+            printf("Unhandled outcome value: %d", outcome);
+            break;
+    }
+
+    empty_stdin();
+
+    return 1;
+}
+
 int8_t show_hand(CardList *hand, uint8_t showAll)
 {
     uint8_t total = 0;
     uint8_t aces = 0;
+    uint8_t count = 0;
 
     Card *current = hand->head;
 
@@ -323,14 +365,23 @@ int8_t show_hand(CardList *hand, uint8_t showAll)
             suite++;
         }
 
-        printf(" %s of %s ", ranks[rank], suits[suite]);
-        uint8_t value = rank+1;
+        if (showAll || count == 0)
+        {
+            printf(" %s of %s ", ranks[rank], suits[suite]);
+            uint8_t value = rank+1;
 
-        if (value > 10) value = 10;
-        else if (value == 1) aces++;
+            if (value > 10) value = 10;
+            else if (value == 1) aces++;
 
-        total += value;
+            total += value;
+        }
+        else
+        {
+            printf(" %s of ???? ", ranks[rank]);
+        }
+
         current = current->next;
+        count++;
 
         delay_ms(250);
     }
