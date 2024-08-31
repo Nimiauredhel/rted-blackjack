@@ -154,7 +154,7 @@ outcome_t pregame(GameData* gameData)
 
     clear();
     printf("      ===     BETTING     ===\n");
-    printf("You have %u in cash, and the pot is %u.\nPlay a round? (Y/N)\n", gameData->cash, gameData->pot);
+    printf("You have $%u in cash, and the pot is $%u.\nPlay a round? (Y/N)\n", gameData->cash, gameData->pot);
     inputIsValid = scanf(" %c", &answer);
     empty_stdin();
 
@@ -167,7 +167,7 @@ outcome_t pregame(GameData* gameData)
 
     if (answer == 'n' || answer == 'N') return -1;
 
-    printf("How much (in multiples of 10) would you like to add to the pot?\n10 X ");
+    printf("How much (in multiples of 10) would you like to add to the pot?\n10 X $");
     inputIsValid = scanf(" %hu", &bet);
     empty_stdin();
     bet *= 10;
@@ -329,21 +329,27 @@ outcome_t game_loop(GameData* gameData)
 
 uint8_t handle_outcome(outcome_t outcome, GameData *gameData)
 {
+    uint32_t winning = 0;
+
     switch (outcome)
     {
         case QUIT:
+            clear();
+            printf("Enough Blackjack for now.\nDon't forget to gamble responsibly!\n");
+            return 1;
         case NONE:
             return 0;
-            break;
         case PLAYER_BLACKJACK:
-            printf("IIIIT'S A BLACKJACK! CONGRATS!\n");
-            gameData->cash += (gameData->pot * 2.5f);
+            winning = gameData->pot * 2.5f;
+            gameData->cash += winning;
             gameData->pot = 0;
+            printf("IIIIT'S A BLACKJACK! CONGRATS!\nYou won $%u.\n", winning);
             break;
         case PLAYER_WIN:
-            printf("You win this one, human!\n");
-            gameData->cash += (gameData->pot * 2);
+            winning = gameData->pot * 2;
+            gameData->cash += winning;
             gameData->pot = 0;
+            printf("You win this one, human!\nYou won $%u.\n", winning);
             break;
         case PLAYER_LOSE:
             printf("Too bad, you lost. Better luck next time.\n");
