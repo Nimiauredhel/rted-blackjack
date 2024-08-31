@@ -88,18 +88,18 @@ int main(void)
     GameData gameData;
     gameData = initialize_data();
 
-    printf("Welcome to Blackjack!\n");
-
-    outcome = pregame(&gameData);
+    clear();
+    printf("Welcome to Blackjack!\nPress 'Enter' to continue.\n");
+    empty_stdin();
 
     while(outcome != -1)
     {
         clear();
+        outcome = pregame(&gameData);
+        if (handle_outcome(outcome, &gameData)) continue;
         outcome = initialize_round(&gameData);
         if (handle_outcome(outcome, &gameData)) continue;
         outcome = game_loop(&gameData);
-        if (handle_outcome(outcome, &gameData)) continue;
-        outcome = pregame(&gameData);
         handle_outcome(outcome, &gameData);
     }
 
@@ -110,7 +110,6 @@ int main(void)
 
 GameData initialize_data(void)
 {
-    printf("Initializing game data struct.\n");
     GameData gameData;
     gameData.cards = malloc(sizeof(Card) * numCards);
     cardlist_init(&gameData.deck);
@@ -340,6 +339,7 @@ uint8_t handle_outcome(outcome_t outcome, GameData *gameData)
             break;
     }
 
+    printf("Press 'Enter' to continue.\n");
     empty_stdin();
 
     return 1;
@@ -407,6 +407,8 @@ void clear(void)
     #if defined(_WIN32) || defined(_WIN64)
         system("cls");
     #endif
+
+    printf("    =======  BLACKJACK  =======\n\n");
 }
 
 void delay_ms(uint16_t ms)
