@@ -46,7 +46,6 @@ typedef struct GameData
 {
     uint16_t cash;
     uint16_t pot;
-    Card* cards;
     CardList deck;
     CardList playerHand;
     CardList dealerHand;
@@ -86,6 +85,7 @@ void cardlist_init(CardList *list);
 void cardlist_add(CardList *list, Card *newCard);
 Card* cardlist_pop(CardList *list);
 Card* cardlist_draw(CardList *list, uint8_t index);
+void cardlist_free(CardList *list);
 
 int main(void)
 {
@@ -108,8 +108,10 @@ int main(void)
         outcome = game_loop(&gameData);
         handle_outcome(outcome, &gameData);
     }
-
-    free(gameData.cards);
+    
+    cardlist_free(&gameData.deck);
+    cardlist_free(&gameData.playerHand);
+    cardlist_free(&gameData.dealerHand);
 
     return 0;
 }
@@ -117,7 +119,6 @@ int main(void)
 GameData initialize_data(void)
 {
     GameData gameData;
-    gameData.cards = malloc(sizeof(Card) * numCards);
     cardlist_init(&gameData.deck);
     cardlist_init(&gameData.playerHand);
     cardlist_init(&gameData.dealerHand);
@@ -132,7 +133,7 @@ GameData initialize_data(void)
         // suits
         for (int suitIdx = 0; suitIdx < NUM_SUITS; suitIdx++)
         {
-            current = &gameData.cards[rankIdx+(NUM_RANKS*suitIdx)];
+            current = malloc(sizeof(Card));
             // set data to rank number
             current->data = rankIdx;
             // shift it 4 bits to the left
@@ -546,4 +547,12 @@ Card* cardlist_draw(CardList *list, uint8_t index)
     out->next = NULL;
 
     return out;
+}
+
+void cardlist_free(CardList *list)
+{
+    while(list->length > 0)
+    {
+        free(cardlist_pop(list));
+    }
 }
