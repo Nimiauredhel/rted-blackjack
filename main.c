@@ -243,13 +243,12 @@ outcome_t initialize_round(GameData* gameData)
 
 outcome_t game_loop(GameData* gameData)
 {
-    uint8_t loop_end = 0;
     uint8_t pick = 0;
     uint8_t value = 0;
     char input[10] = "\0\0\0\0\0\0\0\0\0\0";
 
     // hit or stand loop
-    while (loop_end == 0)
+    for(;;)
     {
         // HIT or STAND
         strcpy(input, "\0\0\0\0\0\0\0\0\0\0"); 
