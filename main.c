@@ -26,9 +26,9 @@ const char ranks[NUM_RANKS][6] =
     "Eight", "Nine", "Ten", "Jack", "Queen", "King"
 };
 
-const char suits[NUM_SUITS][8] =
+const char suits[NUM_SUITS][12] =
 {
-    "Hearts", "Clubs", "Diamond", "Spades"
+    "Hearts ♥\0", "Clubs ♣\0", "Diamond ♦\0", "Spades ♠\0"
 };
 
 // *** TYPEDEFS ***
@@ -442,7 +442,7 @@ int8_t show_hand(CardList *hand, uint8_t showAll)
 
         if (showAll || count == 0)
         {
-            printf(" %s of %s ", ranks[rank], suits[suite]);
+            printf("  %s of %s \n", ranks[rank], suits[suite]);
             uint8_t value = rank+1;
 
             if (value > 10) value = 10;
@@ -452,7 +452,7 @@ int8_t show_hand(CardList *hand, uint8_t showAll)
         }
         else
         {
-            printf(" %s of ???? ", ranks[rank]);
+            printf("  %s of ???? \n", ranks[rank]);
         }
 
         current = current->next;
