@@ -230,6 +230,7 @@ void pregame(GameData* gameData)
 void initialize_round(GameData* gameData)
 {
     uint8_t cardToDraw;
+    uint8_t playerValue;
 
     // if player/dealer hands are not empty,
     // move them back to the deck
@@ -260,9 +261,16 @@ void initialize_round(GameData* gameData)
     printf("\n");
 
     printf("Player initial hand:\n");
-    show_hand(&gameData->player_hand, 1);
+    playerValue = show_hand(&gameData->player_hand, 1);
     printf("\n");
     delay_ms(250);
+
+    if (playerValue == 21)
+    // if exactly 21 player wins
+    {
+        gameData->round_outcome = PLAYER_BLACKJACK;
+        return;
+    }
 
     printf("Dealer initial hand:\n");
     show_hand(&gameData->dealer_hand, 0);
