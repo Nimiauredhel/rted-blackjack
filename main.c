@@ -10,10 +10,12 @@
 #include <string.h>
 #include <time.h>
 
+// *** DEFINES ***
 #define NUM_RANKS (13)
 #define NUM_SUITS (4)
 #define MOVE_CARD(src, dst, srcIndex) cardlist_add(dst, cardlist_draw(src, srcIndex))
 
+// *** CONSTANTS ***
 const uint8_t numCards = NUM_RANKS*NUM_SUITS; // aka 52
 const char *hit_string = "hit\n";
 const char *stand_string = "stand\n";
@@ -29,6 +31,18 @@ const char suits[NUM_SUITS][8] =
     "Hearts", "Clubs", "Diamond", "Spades"
 };
 
+// *** TYPEDEFS ***
+typedef enum RoundOutcome
+{
+    BROKE = -2,
+    QUIT = -1,
+    UNDECIDED = 0,
+    PLAYER_BLACKJACK = 1, // player wins pot * 2.5
+    PLAYER_WIN = 2, // player wins pot * 2
+    PLAYER_LOSE = 3, // no win, pot reset to zero
+    TIE = 4 // no win, pot not reset
+} RoundOutcome;
+
 typedef struct Card
 {
     uint8_t data;
@@ -39,39 +53,30 @@ typedef struct CardList
 {
     Card *head;
     Card *tail;
-    uint8_t length;
+    size_t length;
 } CardList;
 
 typedef struct GameData
 {
+    RoundOutcome round_outcome;
     uint16_t cash;
     uint16_t pot;
     CardList deck;
-    CardList playerHand;
-    CardList dealerHand;
+    CardList player_hand;
+    CardList dealer_hand;
 } GameData;
 
-typedef enum outcome_t
-{
-    BROKE = -2,
-    QUIT = -1,
-    NONE = 0,
-    PLAYER_BLACKJACK = 1, // player wins pot * 2.5
-    PLAYER_WIN = 2, // player wins pot * 2
-    PLAYER_LOSE = 3, // no win, pot reset to zero
-    TIE = 4 // no win, pot not reset
-} outcome_t;
-
+// *** FUNCTION DECLARATIONS ***
 // one-time game data initialization (dynamic for the test requirements)
 GameData initialize_data(void);
 // blackjack outer loop (bet/quit)
-outcome_t pregame(GameData* gameData);
+void pregame(GameData* gameData);
 // once per round initialization code
-outcome_t initialize_round(GameData* gameData);
+void initialize_round(GameData* gameData);
 // blackjack core loop
-outcome_t game_loop(GameData* gameData);
+void game_loop(GameData* gameData);
 // handle outcome, return 0 if no outcome & 1 if round over
-uint8_t handle_outcome(outcome_t outcome, GameData *gameData);
+uint8_t handle_outcome(RoundOutcome outcome, GameData *gameData);
 // writes the contents of card hands
 int8_t show_hand(CardList *hand, uint8_t showAll);
 // clears the screen
@@ -80,38 +85,49 @@ void clear(void);
 void delay_ms(uint32_t ms);
 // empties stdin to avoid input shenanigans
 void empty_stdin(void);
-// *** card list functions ***
+// ** CARD LIST FUNCTIONS **
+// initializes an empty card list
 void cardlist_init(CardList *list);
+// attaches a given card to the tail of a card list
 void cardlist_add(CardList *list, Card *newCard);
+// detaches and returns the head of a card list
 Card* cardlist_pop(CardList *list);
-Card* cardlist_draw(CardList *list, uint8_t index);
+// detaches and returns the specified element of card list
+Card* cardlist_draw(CardList *list, uint8_t element);
+// deallocates all cards of a card list
 void cardlist_free(CardList *list);
 
+/// *** FUNCTION DEFINITIONS ***
 int main(void)
 {
+    // initializing random seed
     srand(time(NULL));
 
-    outcome_t outcome = 0;
+    // initializing game state data
     GameData gameData;
     gameData = initialize_data();
 
+    // game intro message & prompt
     clear();
     printf("Welcome to Blackjack!\nPress 'Enter' to continue.\n");
     empty_stdin();
 
+    // game outer loop (pregame <-> round)
     while(outcome > -1)
     {
-        outcome = pregame(&gameData);
-        if (handle_outcome(outcome, &gameData)) continue;
-        outcome = initialize_round(&gameData);
-        if (handle_outcome(outcome, &gameData)) continue;
-        outcome = game_loop(&gameData);
-        handle_outcome(outcome, &gameData);
+        pregame(&gameData);
+        if (handle_outcome(&gameData)) continue;
+        initialize_round(&gameData);
+        if (handle_outcome(&gameData)) continue;
+
+        // game inner loop (hit or stand -> dealer draw)
+        game_loop(&gameData);
+        handle_outcome(&gameData);
     }
     
     cardlist_free(&gameData.deck);
-    cardlist_free(&gameData.playerHand);
-    cardlist_free(&gameData.dealerHand);
+    cardlist_free(&gameData.player_hand);
+    cardlist_free(&gameData.dealer_hand);
 
     return 0;
 }
@@ -119,11 +135,14 @@ int main(void)
 GameData initialize_data(void)
 {
     GameData gameData;
-    cardlist_init(&gameData.deck);
-    cardlist_init(&gameData.playerHand);
-    cardlist_init(&gameData.dealerHand);
+
+    gameData.round_outcome = UNDECIDED;
     gameData.cash = 1000;
     gameData.pot = 0;
+
+    cardlist_init(&gameData.deck);
+    cardlist_init(&gameData.player_hand);
+    cardlist_init(&gameData.dealer_hand);
 
     Card *current = NULL;
 
@@ -148,22 +167,26 @@ GameData initialize_data(void)
     return gameData;
 }
 
-outcome_t pregame(GameData* gameData)
+void pregame(GameData* gameData)
 {
     int inputIsValid = 0;
     char answer = 'x';
     uint16_t bet = 0;
+    gameData->round_outcome = UNDECIDED;
 
     clear();
     printf("      ===     BETTING     ===\n");
     printf("You have $%u in cash, and the pot is $%u.\n", gameData->cash, gameData->pot);
     delay_ms(500);
 
+    // no cash + no pot == no game
     if (gameData->cash < 10 && gameData->pot == 0)
     {
         delay_ms(1000);
-         return -2;
+        gameData->round_outcome = BROKE;
+        return;
     }
+
     printf("Play a round? (Y/N)\n");
     inputIsValid = scanf(" %c", &answer);
     empty_stdin();
@@ -175,7 +198,11 @@ outcome_t pregame(GameData* gameData)
         empty_stdin();
     }
 
-    if (answer == 'n' || answer == 'N') return -1;
+    if (answer == 'n' || answer == 'N')
+    {
+        gameData->round_outcome = QUIT;
+        return;
+    }
 
     printf("How much (in multiples of 10) would you like to add to the pot?\n10 X $");
     inputIsValid = scanf(" %hu", &bet);
@@ -192,56 +219,52 @@ outcome_t pregame(GameData* gameData)
 
     gameData->cash -= bet;
     gameData->pot += bet;
-
-    return 0;
 }
 
-outcome_t initialize_round(GameData* gameData)
+void initialize_round(GameData* gameData)
 {
-    uint8_t pick;
+    uint8_t cardToDraw;
 
     // if player/dealer hands are not empty,
     // move them back to the deck
-    while (gameData->playerHand.length > 0)
+    while (gameData->player_hand.length > 0)
     {
-        MOVE_CARD(&gameData->playerHand, &gameData->deck, 0);
+        MOVE_CARD(&gameData->player_hand, &gameData->deck, 0);
     }
 
-    while (gameData->dealerHand.length > 0)
+    while (gameData->dealer_hand.length > 0)
     {
-        MOVE_CARD(&gameData->dealerHand, &gameData->deck, 0);
+        MOVE_CARD(&gameData->dealer_hand, &gameData->deck, 0);
     }
 
     // deal two cards to player hand
     for (int i = 0; i < 2; i++)
     {
-        pick = rand() % gameData->deck.length;
-        MOVE_CARD(&gameData->deck, &gameData->playerHand, pick);
+        cardToDraw = rand() % gameData->deck.length;
+        MOVE_CARD(&gameData->deck, &gameData->player_hand, cardToDraw);
     }
 
     // deal two cards to dealer hand
     for (int i = 0; i < 2; i++)
     {
-        pick = rand() % gameData->deck.length;
-        MOVE_CARD(&gameData->deck, &gameData->dealerHand, pick);
+        cardToDraw = rand() % gameData->deck.length;
+        MOVE_CARD(&gameData->deck, &gameData->dealer_hand, cardToDraw);
     }
 
     printf("\n");
 
     printf("Player initial hand:\n");
-    show_hand(&gameData->playerHand, 1);
+    show_hand(&gameData->player_hand, 1);
     printf("\n");
     delay_ms(250);
 
     printf("Dealer initial hand:\n");
-    show_hand(&gameData->dealerHand, 0);
+    show_hand(&gameData->dealer_hand, 0);
     printf("\n");
     delay_ms(250);
-
-    return 0;
 }
 
-outcome_t game_loop(GameData* gameData)
+void game_loop(GameData* gameData)
 {
     uint8_t pick = 0;
     uint8_t value = 0;
@@ -263,12 +286,12 @@ outcome_t game_loop(GameData* gameData)
             clear();
             printf("      ===       HIT       ===\n");
             printf("Dealing card to player!\n");
-            MOVE_CARD(&gameData->deck, &gameData->playerHand, pick);
+            MOVE_CARD(&gameData->deck, &gameData->player_hand, pick);
             // total value is recalculated
             printf("Player hand:\n");
-            value = show_hand(&gameData->playerHand, 1);
+            value = show_hand(&gameData->player_hand, 1);
             printf("Dealer hand:\n");
-            show_hand(&gameData->dealerHand, 0);
+            show_hand(&gameData->dealer_hand, 0);
             // if over 21 player loses
             if (value > 21)
             {
@@ -303,15 +326,15 @@ outcome_t game_loop(GameData* gameData)
     {
         clear();
         printf("      ===  DEALER   DRAW  ===\nPlayer hand:\n");
-        show_hand(&gameData->playerHand, 1);
+        show_hand(&gameData->player_hand, 1);
         printf("\n");
 
         pick = rand() % gameData->deck.length;
         printf("Dealing card to dealer!\n");
         delay_ms(500);
-        MOVE_CARD(&gameData->deck, &gameData->dealerHand, pick);
+        MOVE_CARD(&gameData->deck, &gameData->dealer_hand, pick);
         printf("Dealer hand:\n");
-        dealerValue = show_hand(&gameData->dealerHand, 1);
+        dealerValue = show_hand(&gameData->dealer_hand, 1);
         delay_ms(1000);
     }
 
@@ -336,7 +359,7 @@ outcome_t game_loop(GameData* gameData)
     return PLAYER_WIN;
 }
 
-uint8_t handle_outcome(outcome_t outcome, GameData *gameData)
+uint8_t handle_outcome(RoundOutcome outcome, GameData *gameData)
 {
     uint32_t winning = 0;
 
@@ -350,7 +373,7 @@ uint8_t handle_outcome(outcome_t outcome, GameData *gameData)
             clear();
             printf("Enough Blackjack for now.\nDon't forget to gamble responsibly!\n");
             return 1;
-        case NONE:
+        case UNDECIDED:
             return 0;
         case PLAYER_BLACKJACK:
             winning = gameData->pot * 2.5f;
@@ -510,9 +533,9 @@ Card* cardlist_pop(CardList *list)
     out->next = NULL;
     return out;
 }
-Card* cardlist_draw(CardList *list, uint8_t index)
+Card* cardlist_draw(CardList *list, uint8_t element)
 {
-    if (index == 0)
+    if (element == 0)
     {
         return cardlist_pop(list);
     }
@@ -520,7 +543,7 @@ Card* cardlist_draw(CardList *list, uint8_t index)
     if (list->length == 0) return NULL;
     Card* prev = NULL;
     Card* out = list->head;
-    for (uint8_t i = 0; i < index; i++)
+    for (uint8_t i = 0; i < element; i++)
     {
         prev = out;
         out = out->next;
