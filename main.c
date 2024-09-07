@@ -175,7 +175,7 @@ void pregame(GameData* gameData)
     gameData->round_outcome = UNDECIDED;
 
     clear();
-    printf("      ===     BETTING     ===\n");
+    printf("      ===     BETTING     ===\n\n");
     printf("You have $%u in cash, and the pot is $%u.\n", gameData->cash, gameData->pot);
     delay_ms(500);
 
@@ -284,14 +284,18 @@ void game_loop(GameData* gameData)
             // HIT: player draws another card
             pick = rand() % gameData->deck.length;
             clear();
-            printf("      ===       HIT       ===\n");
-            printf("Dealing card to player!\n");
+            printf("      ===       HIT       ===\n\n");
+            printf("Dealing card to player!\n\n");
             MOVE_CARD(&gameData->deck, &gameData->player_hand, pick);
+
             // total value is recalculated
             printf("Player hand:\n");
             playerValue = show_hand(&gameData->player_hand, 1);
+            printf("\n");
+
             printf("Dealer hand:\n");
             show_hand(&gameData->dealer_hand, 0);
+
             // if over 21 player loses
             if (playerValue > 21)
             {
@@ -327,20 +331,20 @@ void game_loop(GameData* gameData)
     while (dealerValue < 17 && dealerValue <= playerValue)
     {
         clear();
-        printf("      ===  DEALER   DRAW  ===\nPlayer hand:\n");
+        printf("      ===  DEALER   DRAW  ===\n\nPlayer hand:\n");
         playerValue = show_hand(&gameData->player_hand, 1);
         printf("\n");
 
         pick = rand() % gameData->deck.length;
-        printf("Dealing card to dealer!\n");
-        delay_ms(500);
+        printf("Dealing card to dealer!\n\n");
+        delay_ms(250);
+
         MOVE_CARD(&gameData->deck, &gameData->dealer_hand, pick);
         printf("Dealer hand:\n");
         dealerValue = show_hand(&gameData->dealer_hand, 1);
-        delay_ms(1000);
+        printf("\n");
+        delay_ms(750);
     }
-
-    delay_ms(500);
 
     // if it's over 21, player wins
     if (dealerValue > 21)
@@ -367,6 +371,11 @@ void game_loop(GameData* gameData)
 uint8_t handle_outcome(GameData *gameData)
 {
     uint32_t winning = 0;
+
+    if (gameData->round_outcome > 0)
+    {
+        printf("\n   ======  ROUND OVER  ======\n\n");
+    }
 
     switch (gameData->round_outcome)
     {
