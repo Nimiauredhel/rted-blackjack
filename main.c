@@ -367,7 +367,7 @@ void game_loop(GameData* gameData)
     {
         flash_text(3, 350, "Dealer bust!");
         delay_ms(100);
-        print("\n");
+        printf("\n");
         gameData->round_outcome = PLAYER_WIN;
         return;
     }
