@@ -268,13 +268,14 @@ void game_loop(GameData* gameData)
 {
     uint8_t pick = 0;
     uint8_t playerValue = 0;
-    char input[10] = "\0\0\0\0\0\0\0\0\0\0";
+    char reset_string[10] = "\0\0\0\0\0\0\0\0\0\0";
+    char input[10];
 
     // hit or stand loop
     for(;;)
     {
         // HIT or STAND
-        strcpy(input, "\0\0\0\0\0\0\0\0\0\0"); 
+        strcpy(input, reset_string); 
         printf("Would you like to Hit or Stand?\n");
         printf("(Enter \"hit\" or \"stand\" to answer)\n");
         fgets(input, 10, stdin);
