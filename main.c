@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <wchar.h>
 
 // *** DEFINES ***
 #define NUM_RANKS (13)
@@ -20,15 +21,20 @@ const uint8_t numCards = NUM_RANKS*NUM_SUITS; // aka 52
 const char *hit_string = "hit\n";
 const char *stand_string = "stand\n";
 
-const char ranks[NUM_RANKS][6] =
+const char suit_symbols[NUM_SUITS][4] =
+{
+    "♥", "♣", "♦", "♠"
+};
+
+const char suit_names[NUM_SUITS][8] =
+{
+    "Hearts", "Clubs", "Diamond", "Spades"
+};
+
+const char rank_names[NUM_RANKS][6] =
 {
     "Ace", "Two", "Three", "Four", "Five", "Six", "Seven",
     "Eight", "Nine", "Ten", "Jack", "Queen", "King"
-};
-
-const char suits[NUM_SUITS][12] =
-{
-    "Hearts ♥\0", "Clubs ♣\0", "Diamond ♦\0", "Spades ♠\0"
 };
 
 // *** TYPEDEFS ***
@@ -433,6 +439,12 @@ int8_t show_hand(CardList *hand, uint8_t showAll)
         uint8_t rank = current->data >> 4;
         uint8_t suite_byte = (uint8_t)(current->data << 4);
         uint8_t suite = 0;
+        uint8_t value = rank+1;
+
+        if (value > 10) value = 10;
+        else if (value == 1) aces++;
+
+        total += value;
 
         while(suite_byte > 16)
         {
@@ -442,17 +454,11 @@ int8_t show_hand(CardList *hand, uint8_t showAll)
 
         if (showAll || count == 0)
         {
-            printf("  %s of %s \n", ranks[rank], suits[suite]);
-            uint8_t value = rank+1;
-
-            if (value > 10) value = 10;
-            else if (value == 1) aces++;
-
-            total += value;
+            printf(" %d%s %s of %s \n", value, suit_symbols[suite], rank_names[rank], suit_names[suite]);
         }
         else
         {
-            printf("  %s of ???? \n", ranks[rank]);
+            printf(" ?? ???? of ????\n");
         }
 
         current = current->next;
