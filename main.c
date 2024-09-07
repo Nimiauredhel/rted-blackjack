@@ -91,6 +91,8 @@ void clear(void);
 void delay_ms(uint32_t ms);
 // empties stdin to avoid input shenanigans
 void empty_stdin(void);
+// repeatedly flashes text on screen for desired duration
+void flash_text(uint8_t reps, uint32_t delay, const char *text);
 // ** CARD LIST FUNCTIONS **
 // initializes an empty card list
 void cardlist_init(CardList *list);
@@ -350,23 +352,11 @@ void game_loop(GameData* gameData)
         playerValue = show_hand(&gameData->player_hand, 1);
         printf("\nDealer hand:\n");
         dealerValue = show_hand(&gameData->dealer_hand, 1);
-        printf("\n");
-        delay_ms(400);
+        delay_ms(300);
 
         if (dealerValue >= 17 || dealerValue > playerValue) break;
 
-        fflush(stdout);
-
-        for (int i = 0; i < 3; i++)
-        {
-            printf("\r                    ");
-            fflush(stdout);
-            delay_ms(100);
-            printf("\rDealer draws a card!");
-            fflush(stdout);
-            delay_ms(250);
-        }
-
+        flash_text(3, 350, "Dealer draws a card!");
         delay_ms(100);
         pick = rand() % gameData->deck.length;
         MOVE_CARD(&gameData->deck, &gameData->dealer_hand, pick);
@@ -375,6 +365,9 @@ void game_loop(GameData* gameData)
     // if it's over 21, player wins
     if (dealerValue > 21)
     {
+        flash_text(3, 350, "Dealer bust!");
+        delay_ms(100);
+        print("\n");
         gameData->round_outcome = PLAYER_WIN;
         return;
     }
@@ -545,6 +538,29 @@ void empty_stdin (void)
 {
     int c = getchar();
     while (c != '\n' && c != EOF) c = getchar();
+}
+
+void flash_text(uint8_t reps, uint32_t delay, const char *text)
+{
+    int len = strlen(text);
+    uint32_t third = delay/3;
+    printf("\n");
+
+    for (int i = 0; i < reps; i++)
+    {
+        printf("\r");
+
+        for (int j = 0; j < len; j++)
+        {
+            printf(" ");
+        }
+
+        fflush(stdout);
+        delay_ms(third);
+        printf("\r%s", text);
+        fflush(stdout);
+        delay_ms(third*2);
+    }
 }
 
 void cardlist_init(CardList *list)
