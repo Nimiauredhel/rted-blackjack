@@ -183,12 +183,12 @@ void pregame(GameData* gameData)
     clear();
     printf("      ===     BETTING     ===\n\n");
     printf("You have $%u in cash, and the pot is $%u.\n", gameData->cash, gameData->pot);
-    delay_ms(500);
+    delay_ms(200);
 
     // no cash + no pot == no game
     if (gameData->cash < 10 && gameData->pot == 0)
     {
-        delay_ms(1000);
+        delay_ms(800);
         gameData->round_outcome = BROKE;
         return;
     }
@@ -263,7 +263,7 @@ void initialize_round(GameData* gameData)
     printf("Player initial hand:\n");
     playerValue = show_hand(&gameData->player_hand, 1);
     printf("\n");
-    delay_ms(250);
+    delay_ms(150);
 
     if (playerValue == 21)
     // if exactly 21 player wins
@@ -275,7 +275,7 @@ void initialize_round(GameData* gameData)
     printf("Dealer initial hand:\n");
     show_hand(&gameData->dealer_hand, 0);
     printf("\n");
-    delay_ms(250);
+    delay_ms(150);
 }
 
 void game_loop(GameData* gameData)
@@ -412,9 +412,9 @@ uint8_t handle_outcome(GameData *gameData)
             printf("\a\n\n     ======  GAME");
             fflush(stdout);
             delay_ms(1200);
-            printf(" OVER  ======\n\n");
+            printf("\a OVER  ======\n\n");
             fflush(stdout);
-            delay_ms(800);
+            delay_ms(300);
             return 1;
         case QUIT:
             clear();
