@@ -76,7 +76,7 @@ void initialize_round(GameData* gameData);
 // blackjack core loop
 void game_loop(GameData* gameData);
 // handle outcome, return 0 if no outcome & 1 if round over
-uint8_t handle_outcome(RoundOutcome outcome, GameData *gameData);
+uint8_t handle_outcome(GameData *gameData);
 // writes the contents of card hands
 int8_t show_hand(CardList *hand, uint8_t showAll);
 // clears the screen
@@ -113,7 +113,7 @@ int main(void)
     empty_stdin();
 
     // game outer loop (pregame <-> round)
-    while(outcome > -1)
+    while(gameData.round_outcome > -1)
     {
         pregame(&gameData);
         if (handle_outcome(&gameData)) continue;
@@ -267,7 +267,7 @@ void initialize_round(GameData* gameData)
 void game_loop(GameData* gameData)
 {
     uint8_t pick = 0;
-    uint8_t value = 0;
+    uint8_t playerValue = 0;
     char input[10] = "\0\0\0\0\0\0\0\0\0\0";
 
     // hit or stand loop
@@ -289,18 +289,20 @@ void game_loop(GameData* gameData)
             MOVE_CARD(&gameData->deck, &gameData->player_hand, pick);
             // total value is recalculated
             printf("Player hand:\n");
-            value = show_hand(&gameData->player_hand, 1);
+            playerValue = show_hand(&gameData->player_hand, 1);
             printf("Dealer hand:\n");
             show_hand(&gameData->dealer_hand, 0);
             // if over 21 player loses
-            if (value > 21)
+            if (playerValue > 21)
             {
-                return PLAYER_LOSE;
+                gameData->round_outcome = PLAYER_LOSE;
+                return;
             }
             // if exactly 21 player wins
-            else if (value == 21)
+            else if (playerValue == 21)
             {
-                return PLAYER_BLACKJACK;
+                gameData->round_outcome = PLAYER_BLACKJACK;
+                return;
             }
             // else, loop restarts
         }
@@ -322,11 +324,11 @@ void game_loop(GameData* gameData)
     uint8_t dealerValue = 0;
     clear();
 
-    while (dealerValue < 17)
+    while (dealerValue < 17 && dealerValue <= playerValue)
     {
         clear();
         printf("      ===  DEALER   DRAW  ===\nPlayer hand:\n");
-        show_hand(&gameData->player_hand, 1);
+        playerValue = show_hand(&gameData->player_hand, 1);
         printf("\n");
 
         pick = rand() % gameData->deck.length;
@@ -343,27 +345,30 @@ void game_loop(GameData* gameData)
     // if it's over 21, player wins
     if (dealerValue > 21)
     {
-        return PLAYER_WIN;
+        gameData->round_outcome = PLAYER_WIN;
+        return;
     }
     // else if more than player, player loses
-    else if (dealerValue > value)
+    else if (dealerValue > playerValue)
     {
-        return PLAYER_LOSE;
+        gameData->round_outcome = PLAYER_LOSE;
+        return;
     }
     // equals is tie, less than: player wins .. duh
-    else if (dealerValue == value)
+    else if (dealerValue == playerValue)
     {
-        return TIE;
+        gameData->round_outcome = TIE;
+        return;
     }
 
-    return PLAYER_WIN;
+    gameData->round_outcome = PLAYER_WIN;
 }
 
-uint8_t handle_outcome(RoundOutcome outcome, GameData *gameData)
+uint8_t handle_outcome(GameData *gameData)
 {
     uint32_t winning = 0;
 
-    switch (outcome)
+    switch (gameData->round_outcome)
     {
         case BROKE:
             clear();
@@ -395,7 +400,7 @@ uint8_t handle_outcome(RoundOutcome outcome, GameData *gameData)
             printf("It's a tie! Money's still on the table...\n");
             break;
         default:
-            printf("Unhandled outcome value: %d", outcome);
+            printf("Unhandled outcome value: %d", gameData->round_outcome);
             break;
     }
 
