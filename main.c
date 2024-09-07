@@ -282,6 +282,7 @@ void game_loop(GameData* gameData)
 {
     uint8_t pick = 0;
     uint8_t playerValue = 0;
+    uint8_t dealerValue = 0;
     char reset_string[10] = "\0\0\0\0\0\0\0\0\0\0";
     char input[10];
 
@@ -309,7 +310,7 @@ void game_loop(GameData* gameData)
             printf("\n");
 
             printf("Dealer hand:\n");
-            show_hand(&gameData->dealer_hand, 0);
+            dealerValue = show_hand(&gameData->dealer_hand, 0);
 
             // if over 21 player loses
             if (playerValue > 21)
@@ -340,25 +341,35 @@ void game_loop(GameData* gameData)
 
     // dealer draws 
     //until their total value is 17 or over
-    uint8_t dealerValue = 0;
     clear();
 
-    while (dealerValue < 17 && dealerValue <= playerValue)
+    for(;;)
     {
         clear();
         printf("      ===  DEALER   DRAW  ===\n\nPlayer hand:\n");
         playerValue = show_hand(&gameData->player_hand, 1);
-        printf("\n");
-
-        pick = rand() % gameData->deck.length;
-        printf("Dealing card to dealer!\n\n");
-        delay_ms(250);
-
-        MOVE_CARD(&gameData->deck, &gameData->dealer_hand, pick);
-        printf("Dealer hand:\n");
+        printf("\nDealer hand:\n");
         dealerValue = show_hand(&gameData->dealer_hand, 1);
         printf("\n");
-        delay_ms(750);
+        delay_ms(400);
+
+        if (dealerValue >= 17 || dealerValue > playerValue) break;
+
+        fflush(stdout);
+
+        for (int i = 0; i < 3; i++)
+        {
+            printf("\r                    ");
+            fflush(stdout);
+            delay_ms(100);
+            printf("\rDealer draws a card!");
+            fflush(stdout);
+            delay_ms(250);
+        }
+
+        delay_ms(100);
+        pick = rand() % gameData->deck.length;
+        MOVE_CARD(&gameData->deck, &gameData->dealer_hand, pick);
     }
 
     // if it's over 21, player wins
@@ -389,14 +400,21 @@ uint8_t handle_outcome(GameData *gameData)
 
     if (gameData->round_outcome > 0)
     {
-        printf("\n   ======  ROUND OVER  ======\n\n");
+        printf("\a\n   ======  ROUND OVER  ======\n\n");
     }
 
     switch (gameData->round_outcome)
     {
         case BROKE:
-            clear();
-            printf("Out of gambling money.\nGAME OVER.\n");
+            printf("Out of gambling money.");
+            fflush(stdout);
+            delay_ms(800);
+            printf("\a\n\n     ======  GAME");
+            fflush(stdout);
+            delay_ms(1200);
+            printf(" OVER  ======\n\n");
+            fflush(stdout);
+            delay_ms(800);
             return 1;
         case QUIT:
             clear();
@@ -408,7 +426,14 @@ uint8_t handle_outcome(GameData *gameData)
             winning = gameData->pot * 2.5f;
             gameData->cash += winning;
             gameData->pot = 0;
-            printf("IIIIT'S A BLACKJACK! CONGRATS!\nYou won $%u.\n", winning);
+            printf("BLACKJACK\a");
+            for (int i = 0; i < 10; i++)
+            {
+                delay_ms(200);
+                printf(" !\a");
+                fflush(stdout);
+            }
+            printf("\nYou won $%u.\n", winning);
             break;
         case PLAYER_WIN:
             winning = gameData->pot * 2;
@@ -472,10 +497,10 @@ int8_t show_hand(CardList *hand, uint8_t showAll)
         current = current->next;
         count++;
 
-        delay_ms(100);
+        delay_ms(50);
     }
 
-    delay_ms(100);
+    delay_ms(50);
     printf("\n");
 
     // account for aces being able to be either 1 or 10 in value
