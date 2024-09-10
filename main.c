@@ -12,6 +12,8 @@
 #include <wchar.h>
 
 // *** DEFINES ***
+#define false (0)
+#define true (1)
 #define NUM_RANKS (13)
 #define NUM_SUITS (4)
 #define MOVE_CARD(src, dst, srcIndex) cardlist_add(dst, cardlist_draw(src, srcIndex))
@@ -38,6 +40,8 @@ const char rank_names[NUM_RANKS][6] =
 };
 
 // *** TYPEDEFS ***
+typedef uint8_t bool;
+
 typedef enum RoundOutcome
 {
     BROKE = -2,
@@ -82,11 +86,11 @@ void initialize_round(GameData* gameData);
 // blackjack core loop
 void game_loop(GameData* gameData);
 // handle outcome, return 0 if no outcome & 1 if round over
-uint8_t handle_outcome(GameData *gameData);
+bool handle_outcome(GameData *gameData);
 // writes the contents of card hands
-int8_t show_hand(CardList *hand, uint8_t showAll);
+int8_t show_hand(CardList *hand, bool showAll);
 // clears the screen
-void clear(void);
+void new_frame(void);
 // waits for specified number of milliseconds
 void delay_ms(uint32_t ms);
 // empties stdin to avoid input shenanigans
@@ -116,7 +120,7 @@ int main(void)
     gameData = initialize_data();
 
     // game intro message & prompt
-    clear();
+    new_frame();
     printf("Welcome to Blackjack!\nPress 'Enter' to continue.\n");
     empty_stdin();
 
@@ -133,6 +137,11 @@ int main(void)
         handle_outcome(&gameData);
     }
     
+    // free all dynamically allocated memory
+    // to match project requirements;
+    // in a real-world project I would have
+    // allocated the deck statically, which
+    // would be both safer and more performant.
     cardlist_free(&gameData.deck);
     cardlist_free(&gameData.player_hand);
     cardlist_free(&gameData.dealer_hand);
@@ -182,7 +191,7 @@ void pregame(GameData* gameData)
     uint16_t bet = 0;
     gameData->round_outcome = UNDECIDED;
 
-    clear();
+    new_frame();
     printf("      ===     BETTING     ===\n\n");
     printf("You have $%u in cash, and the pot is $%u.\n", gameData->cash, gameData->pot);
     delay_ms(200);
@@ -301,7 +310,7 @@ void game_loop(GameData* gameData)
         {
             // HIT: player draws another card
             pick = rand() % gameData->deck.length;
-            clear();
+            new_frame();
             printf("      ===       HIT       ===\n\n");
             printf("Dealing card to player!\n\n");
             MOVE_CARD(&gameData->deck, &gameData->player_hand, pick);
@@ -343,11 +352,11 @@ void game_loop(GameData* gameData)
 
     // dealer draws 
     //until their total value is 17 or over
-    clear();
+    new_frame();
 
     for(;;)
     {
-        clear();
+        new_frame();
         printf("      ===  DEALER   DRAW  ===\n\nPlayer hand:\n");
         playerValue = show_hand(&gameData->player_hand, 1);
         printf("\nDealer hand:\n");
@@ -387,7 +396,7 @@ void game_loop(GameData* gameData)
     gameData->round_outcome = PLAYER_WIN;
 }
 
-uint8_t handle_outcome(GameData *gameData)
+bool handle_outcome(GameData *gameData)
 {
     uint32_t winning = 0;
 
@@ -410,7 +419,7 @@ uint8_t handle_outcome(GameData *gameData)
             delay_ms(300);
             return 1;
         case QUIT:
-            clear();
+            new_frame();
             printf("Enough Blackjack for now.\nDon't forget to gamble responsibly!\n");
             return 1;
         case UNDECIDED:
@@ -452,7 +461,7 @@ uint8_t handle_outcome(GameData *gameData)
     return 1;
 }
 
-int8_t show_hand(CardList *hand, uint8_t showAll)
+int8_t show_hand(CardList *hand, bool showAll)
 {
     uint8_t total = 0;
     uint8_t aces = 0;
@@ -507,7 +516,7 @@ int8_t show_hand(CardList *hand, uint8_t showAll)
     return total;
 }
 
-void clear(void)
+void new_frame(void)
 {
     #if defined(__linux__) || defined(__unix__) || defined(__APPLE__)
         system("clear");
