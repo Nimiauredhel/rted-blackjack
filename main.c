@@ -542,21 +542,21 @@ void empty_stdin (void)
 
 void flash_text(uint8_t reps, uint32_t delay, const char *text)
 {
-    int len = strlen(text);
     uint32_t third = delay/3;
+    int len = strlen(text);
+    char blank[len+1];
+
+    memset(blank, ' ', len);
+    blank[len] = '\0';
+
     printf("\n");
 
     for (int i = 0; i < reps; i++)
     {
-        printf("\r");
-
-        for (int j = 0; j < len; j++)
-        {
-            printf(" ");
-        }
-
+        printf("\r%s", blank);
         fflush(stdout);
         delay_ms(third);
+
         printf("\r%s", text);
         fflush(stdout);
         delay_ms(third*2);
