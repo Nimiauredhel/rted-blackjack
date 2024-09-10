@@ -402,7 +402,7 @@ bool handle_outcome(GameData *gameData)
 
     if (gameData->round_outcome > 0)
     {
-        printf("\a\n   ======  ROUND OVER  ======\n\n");
+        printf("\n   ======  ROUND OVER  ======\n\n");
     }
 
     switch (gameData->round_outcome)
@@ -420,7 +420,10 @@ bool handle_outcome(GameData *gameData)
             return 1;
         case QUIT:
             new_frame();
-            printf("Enough Blackjack for now.\nDon't forget to gamble responsibly!\n");
+            printf("\aEnough Blackjack for now.\n");
+            fflush(stdout);
+            delay_ms(1200);
+            printf("\aDon't forget to gamble responsibly!\n");
             return 1;
         case UNDECIDED:
             return 0;
@@ -429,9 +432,9 @@ bool handle_outcome(GameData *gameData)
             gameData->cash += winning;
             gameData->pot = 0;
             printf("BLACKJACK\a");
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 8; i++)
             {
-                delay_ms(200);
+                delay_ms(250);
                 printf(" !\a");
                 fflush(stdout);
             }
@@ -441,14 +444,26 @@ bool handle_outcome(GameData *gameData)
             winning = gameData->pot * 2;
             gameData->cash += winning;
             gameData->pot = 0;
-            printf("You win this one, human!\nYou won $%u.\n", winning);
+            printf("\aYou win this one,");
+            fflush(stdout);
+            delay_ms(600);
+            printf("\a human!\n");
+            fflush(stdout);
+            delay_ms(600);
+            printf("\aYou won");
+            fflush(stdout);
+            delay_ms(600);
+            printf("\a $%u.\n", winning);
             break;
         case PLAYER_LOSE:
-            printf("Too bad, you lost. Better luck next time.\n");
+            printf("\aToo bad, you lost.\n");
+            fflush(stdout);
+            delay_ms(1200);
+            printf("\aBetter luck next time.\n");
             gameData->pot = 0;
             break;
         case TIE:
-            printf("It's a tie! Money's still on the table...\n");
+            printf("\aIt's a tie! Money's still on the table...\n");
             break;
         default:
             printf("Unhandled outcome value: %d", gameData->round_outcome);
