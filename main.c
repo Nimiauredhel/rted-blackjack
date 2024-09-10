@@ -489,11 +489,11 @@ int8_t show_hand(CardList *hand, bool showAll)
 
         if (showAll || count == 0)
         {
-            printf(" %d%s %s of %s \n", value, suit_symbols[suite], rank_names[rank], suit_names[suite]);
+            printf(" %2d%-3s %s of %s \n", value, suit_symbols[suite], rank_names[rank], suit_names[suite]);
         }
         else
         {
-            printf(" ?? ???? of ????\n");
+            printf("  ?? ???? of ????\n");
         }
 
         current = current->next;
