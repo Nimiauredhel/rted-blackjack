@@ -110,14 +110,23 @@ Card* cardlist_draw(CardList *list, uint8_t element);
 void cardlist_free(CardList *list);
 
 /// *** FUNCTION DEFINITIONS ***
-int main(void)
+int main(int argc, char *argv[])
 {
-    // initializing random seed
-    srand(time(NULL));
+    // set mode if argument exists
+    bool debugMode = (argc > 1) && (strcmp("debug", argv[1]) == 0);
 
     // initializing game state data
     GameData gameData;
     gameData = initialize_data();
+
+    if (debugMode)
+    {
+        show_hand(&gameData.deck, true);
+        getchar();
+    }
+
+    // initializing random seed
+    srand(time(NULL));
 
     // game intro message & prompt
     new_frame();
