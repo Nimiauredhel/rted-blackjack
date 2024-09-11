@@ -87,10 +87,16 @@ void initialize_round(GameData* gameData);
 void game_loop(GameData* gameData);
 // handle outcome, return 0 if no outcome & 1 if round over
 bool handle_outcome(GameData *gameData);
-// writes the contents of card hands
+// prints the contents of a card list.
+// Note: this could have been split into 3-4 small "clean" functions,
+// but I chose to determine suit, rank & value as well as
+// print them all in one function, to avoid unnecessary
+// code duplication, keeping it simple & fast.
 int8_t show_hand(CardList *hand, bool showAll);
-// clears the screen
+// clears the screen & prints the game's "header" text
 void new_frame(void);
+// prints the game's "footer" text
+void footer(void);
 // waits for specified number of milliseconds
 void delay_ms(uint32_t ms);
 // empties stdin to avoid input shenanigans
@@ -130,7 +136,10 @@ int main(int argc, char *argv[])
 
     // game intro message & prompt
     new_frame();
-    printf("Welcome to Blackjack!\nPress 'Enter' to continue.\n");
+    printf("Welcome to Blackjack!\n");
+    footer();
+    delay_ms(250);
+    printf("Press 'Enter' to continue.\n");
     empty_stdin();
 
     // game outer loop (pregame <-> round)
@@ -201,14 +210,15 @@ void pregame(GameData* gameData)
     gameData->round_outcome = UNDECIDED;
 
     new_frame();
-    printf("      ===     BETTING     ===\n\n");
-    printf("You have $%u in cash, and the pot is $%u.\n", gameData->cash, gameData->pot);
-    delay_ms(200);
+    printf("===       BETTING       ===\n\n");
+    printf("You have $%u in cash,\nand the pot is $%u.\n", gameData->cash, gameData->pot);
+    footer();
+    delay_ms(250);
 
     // no cash + no pot == no game
     if (gameData->cash < 10 && gameData->pot == 0)
     {
-        delay_ms(800);
+        delay_ms(250);
         gameData->round_outcome = BROKE;
         return;
     }
@@ -220,6 +230,7 @@ void pregame(GameData* gameData)
     while (inputIsValid == 0 || (answer != 'Y' && answer != 'N' && answer!='y' && answer !='n'))
     {
         printf("Invalid answer, try again.\n");
+        footer();
         inputIsValid = scanf(" %c", &answer);
         empty_stdin();
     }
@@ -278,9 +289,8 @@ void initialize_round(GameData* gameData)
         MOVE_CARD(&gameData->deck, &gameData->dealer_hand, cardToDraw);
     }
 
-    printf("\n");
-
-    printf("Player initial hand:\n");
+    new_frame();
+    printf("===      NEW ROUND      ===\n\nPlayer initial hand:\n");
     playerValue = show_hand(&gameData->player_hand, 1);
     printf("\n");
     delay_ms(150);
@@ -294,7 +304,7 @@ void initialize_round(GameData* gameData)
 
     printf("Dealer initial hand:\n");
     show_hand(&gameData->dealer_hand, 0);
-    printf("\n");
+    footer();
     delay_ms(150);
 }
 
@@ -320,17 +330,22 @@ void game_loop(GameData* gameData)
             // HIT: player draws another card
             pick = rand() % gameData->deck.length;
             new_frame();
-            printf("      ===       HIT       ===\n\n");
-            printf("Dealing card to player!\n\n");
+            printf("===         HIT         ===\n\n");
+            flash_text(2, 350, "Dealing card to player!");
+            delay_ms(100);
             MOVE_CARD(&gameData->deck, &gameData->player_hand, pick);
 
             // total value is recalculated
-            printf("Player hand:\n");
+            printf("\n\nPlayer hand:\n");
             playerValue = show_hand(&gameData->player_hand, 1);
             printf("\n");
+            delay_ms(500);
 
             printf("Dealer hand:\n");
             dealerValue = show_hand(&gameData->dealer_hand, 0);
+
+            footer();
+            delay_ms(600);
 
             // if over 21 player loses
             if (playerValue > 21)
@@ -361,16 +376,16 @@ void game_loop(GameData* gameData)
 
     // dealer draws 
     //until their total value is 17 or over
-    new_frame();
-
     for(;;)
     {
         new_frame();
-        printf("      ===  DEALER   DRAW  ===\n\nPlayer hand:\n");
+        printf("===    DEALER   DRAW    ===\n\nPlayer hand:\n");
         playerValue = show_hand(&gameData->player_hand, 1);
+        delay_ms(500);
         printf("\nDealer hand:\n");
         dealerValue = show_hand(&gameData->dealer_hand, 1);
-        delay_ms(300);
+        footer();
+        delay_ms(600);
 
         if (dealerValue >= 17 || dealerValue > playerValue) break;
 
@@ -383,7 +398,7 @@ void game_loop(GameData* gameData)
     // if it's over 21, player wins
     if (dealerValue > 21)
     {
-        flash_text(3, 350, "Dealer bust!");
+        flash_text(2, 350, "Dealer bust!");
         delay_ms(100);
         printf("\n");
         gameData->round_outcome = PLAYER_WIN;
@@ -409,30 +424,27 @@ bool handle_outcome(GameData *gameData)
 {
     uint32_t winning = 0;
 
-    if (gameData->round_outcome > 0)
-    {
-        printf("\n   ======  ROUND OVER  ======\n\n");
-    }
-
     switch (gameData->round_outcome)
     {
         case BROKE:
             printf("Out of gambling money.");
             fflush(stdout);
             delay_ms(800);
-            printf("\a\n\n     ======  GAME");
+            printf("\a\n\n======  GAME");
             fflush(stdout);
             delay_ms(1200);
             printf("\a OVER  ======\n\n");
             fflush(stdout);
             delay_ms(300);
+            footer();
             return 1;
         case QUIT:
             new_frame();
-            printf("\aEnough Blackjack for now.\n");
+            printf("Enough Blackjack for now.\n");
             fflush(stdout);
             delay_ms(1200);
             printf("\aDon't forget to gamble responsibly!\n");
+            footer();
             return 1;
         case UNDECIDED:
             return 0;
@@ -453,16 +465,23 @@ bool handle_outcome(GameData *gameData)
             winning = gameData->pot * 2;
             gameData->cash += winning;
             gameData->pot = 0;
-            printf("\aYou win this one,");
+            printf("\aYou");
             fflush(stdout);
-            delay_ms(600);
-            printf("\a human!\n");
+            delay_ms(500);
+            printf("\a win");
             fflush(stdout);
-            delay_ms(600);
-            printf("\aYou won");
+            delay_ms(500);
+            printf("\a this");
             fflush(stdout);
-            delay_ms(600);
-            printf("\a $%u.\n", winning);
+            delay_ms(500);
+            printf("\a one,");
+            fflush(stdout);
+            delay_ms(1000);
+            printf(" human!\n");
+            fflush(stdout);
+            delay_ms(500);
+            printf("You won $%u.\n", winning);
+            delay_ms(100);
             break;
         case PLAYER_LOSE:
             printf("\aToo bad, you lost.\n");
@@ -477,6 +496,12 @@ bool handle_outcome(GameData *gameData)
         default:
             printf("Unhandled outcome value: %d", gameData->round_outcome);
             break;
+    }
+
+
+    if (gameData->round_outcome > 0)
+    {
+        printf("\n ♥♣♦♠   ROUND  OVER   ♠♦♣♥\n\n");
     }
 
     printf("Press 'Enter' to continue.\n");
@@ -513,7 +538,7 @@ int8_t show_hand(CardList *hand, bool showAll)
 
         if (showAll || count == 0)
         {
-            printf(" %2d%-3s %s of %s \n", value, suit_symbols[suite], rank_names[rank], suit_names[suite]);
+            printf(" %2d%-3s--%s of %s \n", value, suit_symbols[suite], rank_names[rank], suit_names[suite]);
         }
         else
         {
@@ -549,7 +574,12 @@ void new_frame(void)
         system("cls");
     #endif
 
-    printf("    =======  BLACKJACK  =======\n\n");
+    printf("=======  BLACKJACK  =======\n\n");
+}
+
+void footer(void)
+{
+    printf("\n=====♥♣♦♠♥♣♦♠♥♠♦♣♥♠♦♣♥=====\n\n");
 }
 
 void delay_ms(uint32_t ms)
@@ -581,8 +611,6 @@ void flash_text(uint8_t reps, uint32_t delay, const char *text)
 
     memset(blank, ' ', len);
     blank[len] = '\0';
-
-    printf("\n");
 
     for (int i = 0; i < reps; i++)
     {
