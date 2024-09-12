@@ -89,7 +89,9 @@ GameData initialize_data(void);
 void pregame(GameData* gameData);
 // once per round initialization code
 void initialize_round(GameData* gameData);
-// blackjack core loop
+// blackjack core loop.
+// considered extracting hit & stand into separate functions,
+// but concluded that it would only increase complexity.
 void game_loop(GameData* gameData);
 // handle outcome, return 0 if no outcome & 1 if round over
 bool handle_outcome(GameData *gameData);
