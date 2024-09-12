@@ -150,7 +150,9 @@ int main(int argc, char *argv[])
     printf("Press 'Enter' to continue.\n");
     empty_stdin();
 
-    // game outer loop (pregame <-> round)
+    // game outer loop (pregame <-> round).
+    // considered reimplementing with an array of function pointers;
+    // decided against it, but it was close.
     while(gameData.round_outcome > -1)
     {
         pregame(&gameData);
