@@ -30,13 +30,19 @@ const char suit_symbols[NUM_SUITS][4] =
 
 const char suit_names[NUM_SUITS][8] =
 {
-    "Hearts", "Clubs", "Diamond", "Spades"
+    "Hearts ", "Clubs  ", "Diamond", "Spades "
+};
+
+const char rank_symbols[NUM_RANKS][3] =
+{
+    " A", " 2", " 3", " 4", " 5", " 6", " 7",
+    " 8", " 9", "10", " J", " Q", " K"
 };
 
 const char rank_names[NUM_RANKS][6] =
 {
-    "Ace", "Two", "Three", "Four", "Five", "Six", "Seven",
-    "Eight", "Nine", "Ten", "Jack", "Queen", "King"
+    "  Ace", "  Two", "Three", " Four", " Five", "  Six", "Seven",
+    "Eight", " Nine", "  Ten", " Jack", "Queen", " King"
 };
 
 // *** TYPEDEFS ***
@@ -538,11 +544,11 @@ int8_t show_hand(CardList *hand, bool showAll)
 
         if (showAll || count == 0)
         {
-            printf(" %2d%-3s--%s of %s \n", value, suit_symbols[suite], rank_names[rank], suit_names[suite]);
+            printf(" [%s%s] %s of %s (%2d)\n", rank_symbols[rank], suit_symbols[suite], rank_names[rank], suit_names[suite], value);
         }
         else
         {
-            printf("  ?? ???? of ????\n");
+            printf(" [ ? ]  ?\??  of   ?\??   (?\?)\n");
         }
 
         current = current->next;
