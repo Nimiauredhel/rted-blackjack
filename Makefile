@@ -1,21 +1,21 @@
 default:
-	gcc main.c card_funcs.c -o main.o
+	gcc *.c -o prog
 
 strict:
-	gcc -std=c99 -pedantic -Wall -Wextra main.c card_funcs.c -o main.o
-
-debug:
-	gcc -std=c99 -pedantic -Wall -Wextra main.c card_funcs.c -g -o0 -o main.o
+	gcc  *.c -std=c99 -Wall -pedantic -Wextra -o prog
+                            
+debug:                      
+	gcc  *.c -std=c99 -Wall -pedantic -Wextra -g -o0 -o prog
 
 run:
-	./main.o
+	./prog
 
 gdb:
-	gdb ./main.o
+	gdb ./prog
 
 valgrind:
-	valgrind -s --leak-check=yes --track-origins=yes ./main.o
+	valgrind -s --leak-check=yes --track-origins=yes ./prog
 
 clean:
-	rm *.o
+	rm prog
 
