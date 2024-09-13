@@ -10,13 +10,12 @@
 #include <string.h>
 #include <time.h>
 #include <wchar.h>
+#include <stdbool.h>
 
 #include "card_structs.h"
 #include "card_funcs.h"
 
 // *** DEFINES ***
-#define FALSE (0)
-#define TRUE (1)
 #define NUM_RANKS (13)
 #define NUM_SUITS (4)
 #define MOVE_CARD(src, dst, srcIndex) cardlist_add(dst, cardlist_draw(src, srcIndex))
@@ -49,8 +48,6 @@ const char rank_names[NUM_RANKS][6] =
 };
 
 // *** TYPEDEFS ***
-typedef int bool;
-
 typedef enum RoundOutcome
 {
     BROKE = -2,
@@ -145,7 +142,7 @@ int main(int argc, char *argv[])
     // DEBUG: print initial contents of entire deck
     if (debugMode)
     {
-        show_hand(&gameData.deck, 0, TRUE);
+        show_hand(&gameData.deck, 0, true);
         getchar();
     }
 
@@ -307,7 +304,7 @@ void initialize_round(GameData* gameData)
     }
 
     new_frame(0);
-    printf("===      NEW ROUND      ===\n\nPlayer initial hand:\n");
+    printf("-==-===  NEW ROUND  ===-==-\n\nPlayer initial hand:\n");
     playerValue = show_hand(&gameData->player_hand, 100, 1);
     printf("\n");
     delay_ms(100);
@@ -326,7 +323,7 @@ void initialize_round(GameData* gameData)
 
 void game_loop(GameData* gameData)
 {
-    bool newPhase = TRUE;
+    bool newPhase = true;
     uint8_t pick = 0;
     uint8_t playerValue = 0;
     uint8_t dealerValue = 0;
@@ -348,9 +345,9 @@ void game_loop(GameData* gameData)
             pick = rand() % gameData->deck.length;
             new_frame(0);
             stagger_string(newPhase ? 5 : 0, "===         HIT         ===\n\n");
-            flash_text(5, 180, "Dealing card to player!");
-            delay_ms(100);
+            flash_text(3, 300, "Dealing card to player!");
             MOVE_CARD(&gameData->deck, &gameData->player_hand, pick);
+            delay_ms(50);
 
             // total value is recalculated
             stagger_string(10, "\n\nPlayer hand:\n");
@@ -390,34 +387,34 @@ void game_loop(GameData* gameData)
             printf("Invalid input, please try again.\n");
         }
 
-        newPhase = FALSE;
+        newPhase = false;
     }
 
     // dealer draws 
     //until their total value is 17 or over
-    newPhase = TRUE;
+    newPhase = true;
 
     for(;;)
     {
         new_frame(0);
         stagger_string(newPhase ? 5 : 0, "===    DEALER   DRAW    ===\n\nPlayer hand:\n");
         playerValue = show_hand(&gameData->player_hand, 0, 1);
-        delay_ms(newPhase ? 0 : 200);
+        delay_ms(newPhase ? 20 : 200);
 
         stagger_string(newPhase ? 0 : 10, "\nDealer hand:\n");
-        dealerValue = show_hand(&gameData->dealer_hand, 400, 1);
+        dealerValue = show_hand(&gameData->dealer_hand, newPhase ? 100 : 400, 1);
         footer(9);
 
         if (dealerValue >= 17 || dealerValue > playerValue) break;
 
         static const char* dealer_draw_text = "Dealer draws a card!";
         stagger_string(10, dealer_draw_text);
-        printf("\r%s", "                    ");
+        stagger_string(10, "\r                    ");
         flash_text(3, 350, dealer_draw_text);
         delay_ms(50);
         pick = rand() % gameData->deck.length;
         MOVE_CARD(&gameData->deck, &gameData->dealer_hand, pick);
-        newPhase = FALSE;
+        newPhase = false;
     }
 
     // if it's over 21, player wins
@@ -425,7 +422,9 @@ void game_loop(GameData* gameData)
     {
         static const char* dealer_bust_text = "Dealer bust!";
         stagger_string(20, dealer_bust_text);
-        printf("\r%s", "            ");
+        stagger_string(20, "\r            ");
+        stagger_string(20, dealer_bust_text);
+        stagger_string(20, "\r            ");
         flash_text(2, 350, dealer_bust_text);
         printf("\n");
         gameData->round_outcome = PLAYER_WIN;
@@ -450,20 +449,18 @@ void game_loop(GameData* gameData)
 bool handle_outcome(GameData *gameData)
 {
     uint32_t winning = 0;
-
+    static const char *blackjack_text = "BLACKJACK";
     static const TextStagger_VariableChunk tsvc_broke[3] =
     {   
         {800, "Out of gambling money."},
         {1000, "\a\n\n======  GAME"},
         {200, "\a OVER  ======\n\n"}
     };
-
     static const TextStagger_VariableChunk tsvc_quit[2] =
     {   
         {1000, "Enough Blackjack for now.\n"},
         {200, "\aDon't forget to gamble responsibly!\n"},
     };
-
     static const TextStagger_VariableChunk tsvc_player_win[6] =
     {   
         {800, "\aYou"},
@@ -491,8 +488,12 @@ bool handle_outcome(GameData *gameData)
             winning = gameData->pot * 2.5f;
             gameData->cash += winning;
             gameData->pot = 0;
-            printf("BLACKJACK\a");
-            stagger_text_uniform_repeat(8, 250, " !\a");
+            stagger_string(10, blackjack_text);
+            stagger_string(20, "\r         \r");
+            stagger_string(30, blackjack_text);
+            stagger_string(20, "\r         \r");
+            stagger_string(10, blackjack_text);
+            stagger_text_uniform_repeat(8, 150, " !\a");
             printf("\nYou won $%u.\n", winning);
             break;
         case PLAYER_WIN:
@@ -520,7 +521,7 @@ bool handle_outcome(GameData *gameData)
 
     if (gameData->round_outcome > 0)
     {
-        printf("\n ♥♣♦♠   ROUND  OVER   ♠♦♣♥\n\n");
+        printf("\n-♥♣♦♠   ROUND  OVER  ♠♦♣♥-\n\n");
     }
 
     printf("Press 'Enter' to continue.\n");
@@ -607,7 +608,7 @@ void new_frame(uint16_t stagger)
 
 void footer(uint16_t stagger)
 {
-    static const char *text = "\n=====♥♣♦♠♥♣♦♠♥♠♦♣♥♠♦♣♥=====\n\n";
+    static const char *text = "\n-====♥♣♦♠♥♣♦♠♥♠♦♣♥♠♦♣♥====-\n\n";
 
     if (stagger)
     {
