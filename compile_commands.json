@@ -4,35 +4,35 @@
       "/usr/bin/gcc",
       "-c",
       "-std=c99",
-      "-pedantic",
       "-Wall",
+      "-pedantic",
       "-Wextra",
       "-g",
       "-o0",
       "-o",
-      "main.o",
-      "main.c"
+      "prog",
+      "card_funcs.c"
     ],
     "directory": "/home/mickey/Repos/rted-blackjack",
-    "file": "/home/mickey/Repos/rted-blackjack/main.c",
-    "output": "/home/mickey/Repos/rted-blackjack/main.o"
+    "file": "/home/mickey/Repos/rted-blackjack/card_funcs.c",
+    "output": "/home/mickey/Repos/rted-blackjack/prog"
   },
   {
     "arguments": [
       "/usr/bin/gcc",
       "-c",
       "-std=c99",
-      "-pedantic",
       "-Wall",
+      "-pedantic",
       "-Wextra",
       "-g",
       "-o0",
       "-o",
-      "main.o",
-      "card_funcs.c"
+      "prog",
+      "main.c"
     ],
     "directory": "/home/mickey/Repos/rted-blackjack",
-    "file": "/home/mickey/Repos/rted-blackjack/card_funcs.c",
-    "output": "/home/mickey/Repos/rted-blackjack/main.o"
+    "file": "/home/mickey/Repos/rted-blackjack/main.c",
+    "output": "/home/mickey/Repos/rted-blackjack/prog"
   }
 ]

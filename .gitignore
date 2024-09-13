@@ -1,3 +1,6 @@
+# the very special name of the output exec
+prog
+
 # Prerequisites
 *.d
 
