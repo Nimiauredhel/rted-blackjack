@@ -506,7 +506,7 @@ bool handle_outcome(GameData *gameData)
             break;
         case PLAYER_LOSE:
             printf("\aToo bad, you lost.\n");
-            delay_ms(1000);
+            delay_ms(500);
             printf("\aBetter luck next time.\n");
             gameData->pot = 0;
             break;
