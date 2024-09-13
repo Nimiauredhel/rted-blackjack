@@ -12,8 +12,8 @@
 #include <wchar.h>
 
 // *** DEFINES ***
-#define false (0)
-#define true (1)
+#define FALSE (0)
+#define TRUE (1)
 #define NUM_RANKS (13)
 #define NUM_SUITS (4)
 #define MOVE_CARD(src, dst, srcIndex) cardlist_add(dst, cardlist_draw(src, srcIndex))
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
 
     if (debugMode)
     {
-        show_hand(&gameData.deck, true);
+        show_hand(&gameData.deck, TRUE);
         getchar();
     }
 
