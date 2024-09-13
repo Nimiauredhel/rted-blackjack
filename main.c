@@ -49,7 +49,7 @@ const char rank_names[NUM_RANKS][6] =
 };
 
 // *** TYPEDEFS ***
-typedef uint8_t bool;
+typedef int bool;
 
 typedef enum RoundOutcome
 {
@@ -71,6 +71,19 @@ typedef struct GameData
     CardList player_hand;
     CardList dealer_hand;
 } GameData;
+
+typedef struct TextStagger_Uniform
+{
+    size_t count;
+    uint32_t delay;
+    char* chunks[];
+} TextStagger_Uniform;
+
+typedef struct TextStagger_VariableChunk
+{
+    uint16_t delay;
+    char* text;
+} TextStagger_VariableChunk;
 
 // *** FUNCTION DECLARATIONS ***
 // one-time game data initialization (dynamic for the test requirements)
@@ -103,6 +116,14 @@ void delay_ms(uint32_t ms);
 void empty_stdin(void);
 // repeatedly flashes text on screen for desired duration
 void flash_text(uint8_t reps, uint32_t delay, const char *text);
+// print out text chunks in uniform delay
+void stagger_text_uniform(TextStagger_Uniform *pattern);
+// same but with one repeated string
+void stagger_text_uniform_repeat(size_t count, uint32_t delay, char* text);
+// print out text chunks in variable delay
+void stagger_text_variable(size_t count, const TextStagger_VariableChunk pattern[]);
+// same but with one repeated string
+void stagger_text_variable_repeat(size_t count, const uint16_t delay[], char* text);
 
 /// *** FUNCTION DEFINITIONS ***
 int main(int argc, char *argv[])
@@ -209,12 +230,12 @@ void pregame(GameData* gameData)
     printf("===       BETTING       ===\n\n");
     printf("You have $%u in cash,\nand the pot is $%u.\n", gameData->cash, gameData->pot);
     footer();
-    delay_ms(250);
+    delay_ms(100);
 
     // no cash + no pot == no game
     if (gameData->cash < 10 && gameData->pot == 0)
     {
-        delay_ms(250);
+        delay_ms(200);
         gameData->round_outcome = BROKE;
         return;
     }
@@ -289,7 +310,7 @@ void initialize_round(GameData* gameData)
     printf("===      NEW ROUND      ===\n\nPlayer initial hand:\n");
     playerValue = show_hand(&gameData->player_hand, 1);
     printf("\n");
-    delay_ms(150);
+    delay_ms(100);
 
     if (playerValue == 21)
     // if exactly 21 player wins
@@ -301,7 +322,7 @@ void initialize_round(GameData* gameData)
     printf("Dealer initial hand:\n");
     show_hand(&gameData->dealer_hand, 0);
     footer();
-    delay_ms(150);
+    delay_ms(100);
 }
 
 void game_loop(GameData* gameData)
@@ -335,13 +356,13 @@ void game_loop(GameData* gameData)
             printf("\n\nPlayer hand:\n");
             playerValue = show_hand(&gameData->player_hand, 1);
             printf("\n");
-            delay_ms(500);
+            delay_ms(300);
 
             printf("Dealer hand:\n");
             dealerValue = show_hand(&gameData->dealer_hand, 0);
 
             footer();
-            delay_ms(600);
+            delay_ms(500);
 
             // if over 21 player loses
             if (playerValue > 21)
@@ -377,11 +398,12 @@ void game_loop(GameData* gameData)
         new_frame();
         printf("===    DEALER   DRAW    ===\n\nPlayer hand:\n");
         playerValue = show_hand(&gameData->player_hand, 1);
-        delay_ms(500);
+        delay_ms(300);
+
         printf("\nDealer hand:\n");
         dealerValue = show_hand(&gameData->dealer_hand, 1);
         footer();
-        delay_ms(600);
+        delay_ms(500);
 
         if (dealerValue >= 17 || dealerValue > playerValue) break;
 
@@ -420,26 +442,37 @@ bool handle_outcome(GameData *gameData)
 {
     uint32_t winning = 0;
 
+    static const TextStagger_VariableChunk tsvc_broke[3] =
+    {   
+        {800, "Out of gambling money."},
+        {1000, "\a\n\n======  GAME"},
+        {200, "\a OVER  ======\n\n"}
+    };
+
+    static const TextStagger_VariableChunk tsvc_quit[2] =
+    {   
+        {1000, "Enough Blackjack for now.\n"},
+        {200, "\aDon't forget to gamble responsibly!\n"},
+    };
+
+    static const TextStagger_VariableChunk tsvc_player_win[5] =
+    {   
+        {500, "\aYou"},
+        {500, "\a win"},
+        {500, "\a this"},
+        {1000, "\a one,"},
+        {500, " human!\n"}
+    };
+
     switch (gameData->round_outcome)
     {
         case BROKE:
-            printf("Out of gambling money.");
-            fflush(stdout);
-            delay_ms(800);
-            printf("\a\n\n======  GAME");
-            fflush(stdout);
-            delay_ms(1200);
-            printf("\a OVER  ======\n\n");
-            fflush(stdout);
-            delay_ms(300);
+            stagger_text_variable(3, tsvc_broke);
             footer();
             return 1;
         case QUIT:
             new_frame();
-            printf("Enough Blackjack for now.\n");
-            fflush(stdout);
-            delay_ms(1200);
-            printf("\aDon't forget to gamble responsibly!\n");
+            stagger_text_variable(2, tsvc_quit);
             footer();
             return 1;
         case UNDECIDED:
@@ -449,40 +482,20 @@ bool handle_outcome(GameData *gameData)
             gameData->cash += winning;
             gameData->pot = 0;
             printf("BLACKJACK\a");
-            for (int i = 0; i < 8; i++)
-            {
-                delay_ms(250);
-                printf(" !\a");
-                fflush(stdout);
-            }
+            stagger_text_uniform_repeat(8, 250, " !\a");
             printf("\nYou won $%u.\n", winning);
             break;
         case PLAYER_WIN:
             winning = gameData->pot * 2;
             gameData->cash += winning;
             gameData->pot = 0;
-            printf("\aYou");
-            fflush(stdout);
-            delay_ms(500);
-            printf("\a win");
-            fflush(stdout);
-            delay_ms(500);
-            printf("\a this");
-            fflush(stdout);
-            delay_ms(500);
-            printf("\a one,");
-            fflush(stdout);
-            delay_ms(1000);
-            printf(" human!\n");
-            fflush(stdout);
-            delay_ms(500);
+            stagger_text_variable(5, tsvc_player_win);
             printf("You won $%u.\n", winning);
             delay_ms(100);
             break;
         case PLAYER_LOSE:
             printf("\aToo bad, you lost.\n");
-            fflush(stdout);
-            delay_ms(1200);
+            delay_ms(1000);
             printf("\aBetter luck next time.\n");
             gameData->pot = 0;
             break;
@@ -617,5 +630,45 @@ void flash_text(uint8_t reps, uint32_t delay, const char *text)
         printf("\r%s", text);
         fflush(stdout);
         delay_ms(third*2);
+    }
+}
+
+void stagger_text_uniform(TextStagger_Uniform *pattern)
+{
+    for (size_t i = 0; i < pattern->count; i++)
+    {
+        printf("%s", pattern->chunks[i]);
+        fflush(stdout);
+        delay_ms(pattern->delay);
+    }
+}
+
+void stagger_text_uniform_repeat(size_t count, uint32_t delay, char* text)
+{
+    for (size_t i = 0; i < count; i++)
+    {
+        printf("%s", text);
+        fflush(stdout);
+        delay_ms(delay);
+    }
+}
+
+void stagger_text_variable(size_t count, const TextStagger_VariableChunk pattern[])
+{
+    for (size_t i = 0; i < count; i++)
+    {
+        printf("%s", pattern[i].text);
+        fflush(stdout);
+        delay_ms(pattern[i].delay);
+    }
+}
+
+void stagger_text_variable_repeat(size_t count, const uint16_t delay[], char* text)
+{
+    for (size_t i = 0; i < count; i++)
+    {
+        printf("%s", text);
+        fflush(stdout);
+        delay_ms(delay[i]);
     }
 }
