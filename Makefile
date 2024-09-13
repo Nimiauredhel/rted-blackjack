@@ -1,11 +1,11 @@
 default:
-	gcc main.c -o main.o
+	gcc main.c card_funcs.c -o main.o
 
 strict:
-	gcc -std=c99 -pedantic -Wall -Wextra main.c -o main.o
+	gcc -std=c99 -pedantic -Wall -Wextra main.c card_funcs.c -o main.o
 
 debug:
-	gcc -std=c99 -pedantic -Wall -Wextra main.c -g -o0 -o main.o
+	gcc -std=c99 -pedantic -Wall -Wextra main.c card_funcs.c -g -o0 -o main.o
 
 run:
 	./main.o

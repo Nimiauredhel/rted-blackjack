@@ -8,12 +8,31 @@
       "-Wall",
       "-Wextra",
       "-g",
+      "-o0",
       "-o",
       "main.o",
       "main.c"
     ],
     "directory": "/home/mickey/Repos/rted-blackjack",
     "file": "/home/mickey/Repos/rted-blackjack/main.c",
+    "output": "/home/mickey/Repos/rted-blackjack/main.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-std=c99",
+      "-pedantic",
+      "-Wall",
+      "-Wextra",
+      "-g",
+      "-o0",
+      "-o",
+      "main.o",
+      "card_funcs.c"
+    ],
+    "directory": "/home/mickey/Repos/rted-blackjack",
+    "file": "/home/mickey/Repos/rted-blackjack/card_funcs.c",
     "output": "/home/mickey/Repos/rted-blackjack/main.o"
   }
 ]

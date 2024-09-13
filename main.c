@@ -11,6 +11,9 @@
 #include <time.h>
 #include <wchar.h>
 
+#include "card_structs.h"
+#include "card_funcs.h"
+
 // *** DEFINES ***
 #define FALSE (0)
 #define TRUE (1)
@@ -59,19 +62,6 @@ typedef enum RoundOutcome
     TIE = 4 // no win, pot not reset
 } RoundOutcome;
 
-typedef struct Card
-{
-    uint8_t data;
-    struct Card *next;
-} Card;
-
-typedef struct CardList
-{
-    Card *head;
-    Card *tail;
-    size_t length;
-} CardList;
-
 typedef struct GameData
 {
     RoundOutcome round_outcome;
@@ -85,6 +75,8 @@ typedef struct GameData
 // *** FUNCTION DECLARATIONS ***
 // one-time game data initialization (dynamic for the test requirements)
 GameData initialize_data(void);
+// game intro message & prompt
+void intro_sequence(void);
 // blackjack outer loop (bet/quit)
 void pregame(GameData* gameData);
 // once per round initialization code
@@ -111,17 +103,6 @@ void delay_ms(uint32_t ms);
 void empty_stdin(void);
 // repeatedly flashes text on screen for desired duration
 void flash_text(uint8_t reps, uint32_t delay, const char *text);
-// ** CARD LIST FUNCTIONS **
-// initializes an empty card list
-void cardlist_init(CardList *list);
-// attaches a given card to the tail of a card list
-void cardlist_add(CardList *list, Card *newCard);
-// detaches and returns the head of a card list
-Card* cardlist_pop(CardList *list);
-// detaches and returns the specified element of card list
-Card* cardlist_draw(CardList *list, uint8_t element);
-// deallocates all cards of a card list
-void cardlist_free(CardList *list);
 
 /// *** FUNCTION DEFINITIONS ***
 int main(int argc, char *argv[])
@@ -133,22 +114,17 @@ int main(int argc, char *argv[])
     GameData gameData;
     gameData = initialize_data();
 
+    // initializing random seed
+    srand(time(NULL));
+
+    intro_sequence();
+
+    // DEBUG: print initial contents of entire deck
     if (debugMode)
     {
         show_hand(&gameData.deck, TRUE);
         getchar();
     }
-
-    // initializing random seed
-    srand(time(NULL));
-
-    // game intro message & prompt
-    new_frame();
-    printf("Welcome to Blackjack!\n");
-    footer();
-    delay_ms(250);
-    printf("Press 'Enter' to continue.\n");
-    empty_stdin();
 
     // game outer loop (pregame <-> round).
     // considered reimplementing with an array of function pointers;
@@ -210,6 +186,16 @@ GameData initialize_data(void)
     }
 
     return gameData;
+}
+
+void intro_sequence(void)
+{
+    new_frame();
+    printf("Welcome to Blackjack!\n");
+    footer();
+    delay_ms(250);
+    printf("Press 'Enter' to continue.\n");
+    empty_stdin();
 }
 
 void pregame(GameData* gameData)
@@ -531,8 +517,8 @@ int8_t show_hand(CardList *hand, bool showAll)
     while(current != NULL)
     {
         uint8_t rank = current->data >> 4;
-        uint8_t suite_byte = (uint8_t)(current->data << 4);
-        uint8_t suite = 0;
+        uint8_t suit_byte = (uint8_t)(current->data << 4);
+        uint8_t suit = 0;
         uint8_t value = rank+1;
 
         if (value > 10) value = 10;
@@ -540,15 +526,15 @@ int8_t show_hand(CardList *hand, bool showAll)
 
         total += value;
 
-        while(suite_byte > 16)
+        while(suit_byte > 16)
         {
-            suite_byte /= 2;
-            suite++;
+            suit_byte /= 2;
+            suit++;
         }
 
         if (showAll || count == 0)
         {
-            printf(" [%s%s] %s of %s (%2d)\n", rank_symbols[rank], suit_symbols[suite], rank_names[rank], suit_names[suite], value);
+            printf(" [%s%s] %s of %s (%2d)\n", rank_symbols[rank], suit_symbols[suit], rank_names[rank], suit_names[suit], value);
         }
         else
         {
@@ -631,91 +617,5 @@ void flash_text(uint8_t reps, uint32_t delay, const char *text)
         printf("\r%s", text);
         fflush(stdout);
         delay_ms(third*2);
-    }
-}
-
-void cardlist_init(CardList *list)
-{
-    list->length = 0;
-    list->head = NULL;
-    list->tail = NULL;
-}
-void cardlist_add(CardList *list, Card *newCard)
-{
-    if (list->length == 0)
-    {
-        list->head = newCard;
-        list->tail = newCard;
-        list->length = 1;
-    }
-    else
-    {
-        list->tail->next = newCard;
-        list->tail = newCard;
-        list->length++;
-    }
-}
-Card* cardlist_pop(CardList *list)
-{
-    if (list->length == 0) return NULL;
-    Card* out = list->head;
-    list->length--;
-
-    if (list->length == 0)
-    {
-        list->head = NULL;
-        list->tail = NULL;
-    }
-    else
-    {
-        list->head = out->next;
-    }
-
-    out->next = NULL;
-    return out;
-}
-Card* cardlist_draw(CardList *list, uint8_t element)
-{
-    if (element == 0)
-    {
-        return cardlist_pop(list);
-    }
-
-    if (list->length == 0) return NULL;
-    Card* prev = NULL;
-    Card* out = list->head;
-    for (uint8_t i = 0; i < element; i++)
-    {
-        prev = out;
-        out = out->next;
-    }
-
-    list->length--;
-
-    if (list->length == 0)
-    {
-        list->head = NULL;
-        list->tail = NULL;
-    }
-    else
-    {
-        if (out->next == NULL)
-        {
-            list->tail = prev;
-        }
-
-        prev->next = out->next;
-    }
-
-    out->next = NULL;
-
-    return out;
-}
-
-void cardlist_free(CardList *list)
-{
-    while(list->length > 0)
-    {
-        free(cardlist_pop(list));
     }
 }
