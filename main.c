@@ -421,11 +421,11 @@ void game_loop(GameData* gameData)
     if (dealerValue > 21)
     {
         static const char* dealer_bust_text = "Dealer bust!";
-        stagger_string(20, dealer_bust_text);
-        stagger_string(20, "\r            ");
-        stagger_string(20, dealer_bust_text);
-        stagger_string(20, "\r            ");
-        flash_text(2, 350, dealer_bust_text);
+        stagger_string(10, dealer_bust_text);
+        stagger_string(20, "\r            \r");
+        stagger_string(30, dealer_bust_text);
+        stagger_string(10, "\r            \r");
+        flash_text(2, 300, dealer_bust_text);
         printf("\n");
         gameData->round_outcome = PLAYER_WIN;
         return;
@@ -506,12 +506,13 @@ bool handle_outcome(GameData *gameData)
             break;
         case PLAYER_LOSE:
             printf("\aToo bad, you lost.\n");
-            delay_ms(500);
-            printf("\aBetter luck next time.\n");
+            delay_ms(200);
+            stagger_string(20, "\aBetter luck next time.\n");
             gameData->pot = 0;
             break;
         case TIE:
-            printf("\aIt's a tie! Money's still on the table...\n");
+            printf("\aIt's a tie!");
+            stagger_string(30, " Money's still on the table...\n");
             break;
         default:
             printf("Unhandled outcome value: %d", gameData->round_outcome);
@@ -571,9 +572,6 @@ int8_t show_hand(CardList *hand, uint16_t stagger, bool showAll)
         count++;
     }
 
-    delay_ms(stagger);
-    printf("\n");
-
     // account for aces being able to be either 1 or 10 in value
     while(total < 13 && aces > 0)
     {
@@ -581,7 +579,15 @@ int8_t show_hand(CardList *hand, uint16_t stagger, bool showAll)
         aces--;
     }
 
-    printf("Total: %hu \n", total);
+    if (showAll)
+    {
+        printf("Total: [%hu]\n", total);
+    }
+    else
+    {
+        printf("Total: [??]\n");
+    }
+
     return total;
 }
 
