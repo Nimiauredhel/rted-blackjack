@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "delay.h"
 
 typedef struct TextStagger_Uniform
@@ -32,5 +33,7 @@ void stagger_text_variable(size_t count, const TextStagger_VariableChunk pattern
 void stagger_text_variable_repeat(size_t count, const uint16_t delay[], char* text);
 // print out the characters of a single string in uniform delay
 void stagger_string(uint16_t delay, const char* text);
+// textually increment up to a number from 0
+void run_up_number_2d(uint16_t delay, uint32_t number, uint32_t dramaNumber);
 
 #endif

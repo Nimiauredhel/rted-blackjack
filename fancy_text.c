@@ -78,3 +78,20 @@ void stagger_string(uint16_t delay, const char* text)
         delay_ms(delay);
     }
 }
+
+void run_up_number_2d(uint16_t delay, uint32_t number, uint32_t dramaNumber)
+{
+    float current = 0;
+    float drama = 1.0;
+
+    printf("  ");
+
+    while (current <= number)
+    {
+        drama = 1.1 - (fabsf(dramaNumber-current)/dramaNumber);
+        printf("\b\b%2u", (uint32_t)current);
+        fflush(stdout);
+        delay_ms(delay*drama);
+        current++;
+    }
+}

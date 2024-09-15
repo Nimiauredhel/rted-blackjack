@@ -556,7 +556,16 @@ int8_t show_hand(CardList *hand, uint16_t stagger, bool showAll)
 
     if (showAll)
     {
-        printf("Total: [%hu]\n", total);
+        if (stagger)
+        {
+            printf("Total: ");
+            run_up_number_2d(80, total, 21);
+            printf("\n");
+        }
+        else
+        {
+            printf("Total: [%hu]\n", total);
+        }
     }
     else
     {
