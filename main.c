@@ -1,19 +1,15 @@
-    #if defined(__linux__) || defined(__unix__) || defined(__APPLE__)
-#define _GNU_SOURCE
-    #endif
-    #if defined(_WIN32) || defined(_WIN64)
-    #endif
-
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <wchar.h>
 #include <stdbool.h>
+#include <time.h>
 
 #include "card_structs.h"
 #include "card_funcs.h"
+#include "delay.h"
+#include "fancy_text.h"
 
 // *** DEFINES ***
 #define NUM_RANKS (13)
@@ -69,19 +65,6 @@ typedef struct GameData
     CardList dealer_hand;
 } GameData;
 
-typedef struct TextStagger_Uniform
-{
-    size_t count;
-    uint32_t delay;
-    char* chunks[];
-} TextStagger_Uniform;
-
-typedef struct TextStagger_VariableChunk
-{
-    uint16_t delay;
-    char* text;
-} TextStagger_VariableChunk;
-
 // *** FUNCTION DECLARATIONS ***
 // one-time game data initialization (dynamic for the test requirements)
 GameData initialize_data(void);
@@ -107,22 +90,8 @@ int8_t show_hand(CardList *hand, uint16_t stagger, bool showAll);
 void new_frame(uint16_t stagger);
 // prints the game's "footer" text
 void footer(uint16_t stagger);
-// waits for specified number of milliseconds
-void delay_ms(uint32_t ms);
 // empties stdin to avoid input shenanigans
 void empty_stdin(void);
-// repeatedly flashes text on screen for desired duration
-void flash_text(uint8_t reps, uint32_t delay, const char *text);
-// print out text chunks in uniform delay
-void stagger_text_uniform(TextStagger_Uniform *pattern);
-// same but with one repeated string
-void stagger_text_uniform_repeat(size_t count, uint32_t delay, char* text);
-// print out text chunks in variable delay
-void stagger_text_variable(size_t count, const TextStagger_VariableChunk pattern[]);
-// same but with one repeated string
-void stagger_text_variable_repeat(size_t count, const uint16_t delay[], char* text);
-// print out the characters of a single string in uniform delay
-void stagger_string(uint16_t delay, const char* text);
 
 /// *** FUNCTION DEFINITIONS ***
 int main(int argc, char *argv[])
@@ -632,104 +601,8 @@ void footer(uint16_t stagger)
     }
 }
 
-void delay_ms(uint32_t ms)
-{
-    if (ms <= 0) return;
-
-    #if defined(__linux__) || defined(__unix__) || defined(__APPLE__)
-        uint32_t s = ms / 1000;
-        ms = ms % 1000;
-        struct timespec req = { s, ms * 1000000 };
-        struct timespec rem = { s, ms * 1000000 };
-        nanosleep(&req, &rem);
-    #endif
-    #if defined(_WIN32) || defined(_WIN64)
-        clock_t start_time = clock();
-        while (clock() < start_time + ms);
-    #endif
-}
-
 void empty_stdin (void)
 {
     int c = getchar();
     while (c != '\n' && c != EOF) c = getchar();
-}
-
-void flash_text(uint8_t reps, uint32_t delay, const char *text)
-{
-    uint32_t third = delay/3;
-    int len = strlen(text);
-    char blank[len+1];
-
-    memset(blank, ' ', len);
-    blank[len] = '\0';
-
-    for (int i = 0; i < reps; i++)
-    {
-        printf("\r%s", blank);
-        fflush(stdout);
-        delay_ms(third);
-
-        printf("\r%s", text);
-        fflush(stdout);
-        delay_ms(third*2);
-    }
-}
-
-void stagger_text_uniform(TextStagger_Uniform *pattern)
-{
-    for (size_t i = 0; i < pattern->count; i++)
-    {
-        printf("%s", pattern->chunks[i]);
-        fflush(stdout);
-        delay_ms(pattern->delay);
-    }
-}
-
-void stagger_text_uniform_repeat(size_t count, uint32_t delay, char* text)
-{
-    for (size_t i = 0; i < count; i++)
-    {
-        printf("%s", text);
-        fflush(stdout);
-        delay_ms(delay);
-    }
-}
-
-void stagger_text_variable(size_t count, const TextStagger_VariableChunk pattern[])
-{
-    for (size_t i = 0; i < count; i++)
-    {
-        printf("%s", pattern[i].text);
-        fflush(stdout);
-        delay_ms(pattern[i].delay);
-    }
-}
-
-void stagger_text_variable_repeat(size_t count, const uint16_t delay[], char* text)
-{
-    for (size_t i = 0; i < count; i++)
-    {
-        printf("%s", text);
-        fflush(stdout);
-        delay_ms(delay[i]);
-    }
-}
-
-void stagger_string(uint16_t delay, const char* text)
-{
-    if (delay == 0)
-    {
-        printf("%s", text);
-        return;
-    }
-
-    size_t length = strlen(text);
-
-    for (size_t i = 0; i < length; i++)
-    {
-        printf("%c", text[i]);
-        fflush(stdout);
-        delay_ms(delay);
-    }
 }
