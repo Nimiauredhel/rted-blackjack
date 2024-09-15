@@ -50,13 +50,13 @@ const char rank_names[NUM_RANKS][6] =
 // *** TYPEDEFS ***
 typedef enum RoundOutcome
 {
-    BROKE = -2,
-    QUIT = -1,
-    UNDECIDED = 0,
-    PLAYER_BLACKJACK = 1, // player wins pot * 2.5
-    PLAYER_WIN = 2, // player wins pot * 2
-    PLAYER_LOSE = 3, // no win, pot reset to zero
-    TIE = 4 // no win, pot not reset
+    OUTCOME_BROKE = -2,
+    OUTCOME_QUIT = -1,
+    OUTCOME_UNDECIDED = 0,
+    OUTCOME_BLACKJACK = 1, // player wins pot * 2.5
+    OUTCOME_WIN = 2, // player wins pot * 2
+    OUTCOME_LOSE = 3, // no win, pot reset to zero
+    OUTCOME_TIE = 4 // no win, pot not reset
 } RoundOutcome;
 
 typedef struct GameData
@@ -177,7 +177,7 @@ GameData initialize_data(void)
 {
     GameData gameData;
 
-    gameData.round_outcome = UNDECIDED;
+    gameData.round_outcome = OUTCOME_UNDECIDED;
     gameData.cash = 1000;
     gameData.pot = 0;
 
@@ -222,7 +222,7 @@ void pregame(GameData* gameData)
     int inputIsValid = 0;
     char answer = 'x';
     uint16_t bet = 0;
-    gameData->round_outcome = UNDECIDED;
+    gameData->round_outcome = OUTCOME_UNDECIDED;
 
     new_frame(0);
     printf("===       BETTING       ===\n\n");
@@ -233,7 +233,7 @@ void pregame(GameData* gameData)
     if (gameData->cash < 10 && gameData->pot == 0)
     {
         delay_ms(200);
-        gameData->round_outcome = BROKE;
+        gameData->round_outcome = OUTCOME_BROKE;
         return;
     }
 
@@ -251,7 +251,7 @@ void pregame(GameData* gameData)
 
     if (answer == 'n' || answer == 'N')
     {
-        gameData->round_outcome = QUIT;
+        gameData->round_outcome = OUTCOME_QUIT;
         return;
     }
 
@@ -312,7 +312,7 @@ void initialize_round(GameData* gameData)
     if (playerValue == 21)
     // if exactly 21 player wins
     {
-        gameData->round_outcome = PLAYER_BLACKJACK;
+        gameData->round_outcome = OUTCOME_BLACKJACK;
         return;
     }
 
@@ -358,13 +358,13 @@ void game_loop(GameData* gameData)
             // if over 21 player loses
             if (playerValue > 21)
             {
-                gameData->round_outcome = PLAYER_LOSE;
+                gameData->round_outcome = OUTCOME_LOSE;
                 return;
             }
             // if exactly 21 player wins
             else if (playerValue == 21)
             {
-                gameData->round_outcome = PLAYER_BLACKJACK;
+                gameData->round_outcome = OUTCOME_BLACKJACK;
                 return;
             }
 
@@ -427,23 +427,23 @@ void game_loop(GameData* gameData)
         stagger_string(10, "\r            \r");
         flash_text(2, 300, dealer_bust_text);
         printf("\n");
-        gameData->round_outcome = PLAYER_WIN;
+        gameData->round_outcome = OUTCOME_WIN;
         return;
     }
     // else if more than player, player loses
     else if (dealerValue > playerValue)
     {
-        gameData->round_outcome = PLAYER_LOSE;
+        gameData->round_outcome = OUTCOME_LOSE;
         return;
     }
     // equals is tie, less than: player wins .. duh
     else if (dealerValue == playerValue)
     {
-        gameData->round_outcome = TIE;
+        gameData->round_outcome = OUTCOME_TIE;
         return;
     }
 
-    gameData->round_outcome = PLAYER_WIN;
+    gameData->round_outcome = OUTCOME_WIN;
 }
 
 bool handle_outcome(GameData *gameData)
@@ -473,18 +473,18 @@ bool handle_outcome(GameData *gameData)
 
     switch (gameData->round_outcome)
     {
-        case BROKE:
+        case OUTCOME_BROKE:
             stagger_text_variable(3, tsvc_broke);
             footer(7);
             return 1;
-        case QUIT:
+        case OUTCOME_QUIT:
             new_frame(0);
             stagger_text_variable(2, tsvc_quit);
             footer(5);
             return 1;
-        case UNDECIDED:
+        case OUTCOME_UNDECIDED:
             return 0;
-        case PLAYER_BLACKJACK:
+        case OUTCOME_BLACKJACK:
             winning = gameData->pot * 2.5f;
             gameData->cash += winning;
             gameData->pot = 0;
@@ -496,7 +496,7 @@ bool handle_outcome(GameData *gameData)
             stagger_text_uniform_repeat(8, 150, " !\a");
             printf("\nYou won $%u.\n", winning);
             break;
-        case PLAYER_WIN:
+        case OUTCOME_WIN:
             winning = gameData->pot * 2;
             gameData->cash += winning;
             gameData->pot = 0;
@@ -504,13 +504,13 @@ bool handle_outcome(GameData *gameData)
             printf("You won $%u.\n", winning);
             delay_ms(100);
             break;
-        case PLAYER_LOSE:
+        case OUTCOME_LOSE:
             printf("\aToo bad, you lost.\n");
             delay_ms(200);
             stagger_string(20, "\aBetter luck next time.\n");
             gameData->pot = 0;
             break;
-        case TIE:
+        case OUTCOME_TIE:
             printf("\aIt's a tie!");
             stagger_string(30, " Money's still on the table...\n");
             break;
