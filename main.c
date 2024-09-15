@@ -450,31 +450,36 @@ bool handle_outcome(GameData *gameData)
 {
     uint32_t winning = 0;
     static const char *blackjack_text = "BLACKJACK";
-    static const TextStagger_VariableChunk tsvc_broke[3] =
+    static const TextStagger_VariableChunk tsvc_broke[8] =
     {   
-        {800, "Out of gambling money."},
-        {1000, "\a\n\n======  GAME"},
+        {100, "Out "},
+        {100, "of "},
+        {100, "gambling "},
+        {200, "money."},
+        {250, ".."},
+        {500, "..."},
+        {800, "\a\n\n======  GAME"},
         {200, "\a OVER  ======\n\n"}
     };
     static const TextStagger_VariableChunk tsvc_quit[2] =
     {   
-        {1000, "Enough Blackjack for now.\n"},
+        {800, "Enough Blackjack for now.\n"},
         {200, "\aDon't forget to gamble responsibly!\n"},
     };
     static const TextStagger_VariableChunk tsvc_player_win[6] =
     {   
-        {800, "\aYou"},
-        {250, "\a win"},
-        {150, "\a this"},
-        {800, "\a one,"},
-        {200, "\a hu"},
-        {200, "\aman!\n"}
+        {400, "\aYou"},
+        {125, "\a win"},
+        {75, "\a this"},
+        {400, "\a one,"},
+        {75, "\a hu"},
+        {125, "\aman!\n"}
     };
 
     switch (gameData->round_outcome)
     {
         case OUTCOME_BROKE:
-            stagger_text_variable(3, tsvc_broke);
+            stagger_text_variable(8, tsvc_broke);
             footer(7);
             return 1;
         case OUTCOME_QUIT:
