@@ -62,8 +62,8 @@ typedef enum RoundOutcome
 typedef struct GameData
 {
     RoundOutcome round_outcome;
-    uint16_t cash;
-    uint16_t pot;
+    uint32_t cash;
+    uint32_t pot;
     CardList deck;
     CardList player_hand;
     CardList dealer_hand;
@@ -127,7 +127,8 @@ void stagger_string(uint16_t delay, const char* text);
 /// *** FUNCTION DEFINITIONS ***
 int main(int argc, char *argv[])
 {
-    // set mode if argument exists
+    // set debug mode if argument passed.
+    // currently only exists to print out the deck on init
     bool debugMode = (argc > 1) && (strcmp("debug", argv[1]) == 0);
 
     // initializing game state data
@@ -139,7 +140,7 @@ int main(int argc, char *argv[])
 
     intro_sequence();
 
-    // DEBUG: print initial contents of entire deck
+    // DEBUG only: print initial contents of entire deck
     if (debugMode)
     {
         show_hand(&gameData.deck, 0, true);
