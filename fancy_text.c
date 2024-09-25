@@ -4,7 +4,7 @@ void flash_text(uint8_t reps, uint32_t delay, const char *text)
 {
     uint32_t third = delay/3;
     int len = strlen(text);
-    char blank[len+1];
+    char *blank = malloc(sizeof(char) * len+1);
 
     memset(blank, ' ', len);
     blank[len] = '\0';
@@ -19,6 +19,8 @@ void flash_text(uint8_t reps, uint32_t delay, const char *text)
         fflush(stdout);
         delay_ms(third*2);
     }
+
+    free(blank);
 }
 
 void stagger_text_uniform(TextStagger_Uniform *pattern)
